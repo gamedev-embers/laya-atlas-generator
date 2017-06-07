@@ -1,0 +1,6 @@
+*.pro.user.*
+cmake-build-debug
+default_output
+default_resource
+.idea
+res*
