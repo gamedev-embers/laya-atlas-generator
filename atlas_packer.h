@@ -9,64 +9,73 @@
 #include <QImage>
 #include <QtCore/QDir>
 
+#include "RectangleBinPack/Rect.h"
 #include "RectangleBinPack/MaxRectsBinPack.h"
+#include "data_export.h"
 
-struct Bounds
-{
-    int x = 0, y = 0, w = 0, h = 0;
-    int bottom = 0, right = 0;
-};
-struct Size
-{
-    int w = 0, h = 0;
-};
 struct ImageInfo
 {
     QImage *image = nullptr;
     QString filename;
-    Bounds frame;
+    rbp::Rect frame;
     bool rotated = false;
     bool trimmed = false;
-    Bounds spriteSourceSize;
-    Size sourceSize;
+
+    rbp::Rect sprite_source_size;
+    rbp::RectSize source_size;
 };
 struct HeuristicResult
 {
-    rbp::MaxRectsBinPack::FreeRectChoiceHeuristic heuristic;
-    Size opacity_size;
-    Size bin_size;
+    rbp::MaxRectsBinPack::FreeRectChoiceHeuristic method;
+    std::vector<rbp::Rect> rects;
+    std::vector<ImageInfo> images;
+    double occupancy;
+    rbp::RectSize opacity_size;
+    rbp::RectSize bin_size;
 };
 
 class AtlasPacker
 {
 private:
-    int getCeilPowOfTwo(int value);
-    QImage* ImageCropAlpha(const QImage *input, Bounds &new_bounds);
+    QImage* ImageCropAlpha(const QImage *input, rbp::Rect &new_bounds);
 
-    QImage* ImageExtrude(QImage *input, bool trimmed, Bounds bounds);
+    QImage* ImageExtrude(QImage *input, bool trimmed, ImageInfo& bounds);
     void ImageDrawImage(QImage &canvas, const QImage &image, int dest_x, int dest_y);
-    void evaluateAppropriateSize(QVector<ImageInfo>& images,
-                                 rbp::MaxRectsBinPack::FreeRectChoiceHeuristic  choice_heuristic,
-                                 Size& opacity_bounds, Size& bin_size);
-    bool canAccommodate(rbp::MaxRectsBinPack::FreeRectChoiceHeuristic choice_heuristic, QVector<ImageInfo> &images, int w, int h,
-                   Size& opacity_bounds);
-    void storageHeuristicResult(QVector<ImageInfo> &images, QVector<HeuristicResult> &heuristic_result,
-                                rbp::MaxRectsBinPack::FreeRectChoiceHeuristic choiceHeuristic);
-    bool Insert(QImage &canvas, ImageInfo &image_info, rbp::MaxRectsBinPack::FreeRectChoiceHeuristic heuristic);
-    void generateAtlas(QVector<ImageInfo> &images);
-    void ExportAtlas(const QImage &canvas);
-
-    rbp::MaxRectsBinPack bin_pack;
+    void StorageInsertResult(QVector<HeuristicResult> &heuristic_result,
+                             rbp::MaxRectsBinPack::FreeRectChoiceHeuristic method);
+    void GenerateAtlas();
+    bool Insert(int bin_width, int bin_height, HeuristicResult &result, rbp::MaxRectsBinPack::FreeRectChoiceHeuristic method);
 
     int sheet_index;
 
-    QDir export_dir;
+    rbp::MaxRectsBinPack bin_pack;
+    std::vector<ImageInfo> images;
+    std::vector<QImage*> canvases;
+    DataExport* data_export;
 
 public:
 
     AtlasPacker();
-
-    void PackImages(QVector<ImageInfo> &images, const QDir &in_dir);
+    ~AtlasPacker();
+    /*
+     * try to add a image to AtlasPacker.
+     * <filename> is the path to image.
+     * if this isn't a image file, or file not exist, return false.
+     */
+    bool AddImage(QString filename);
+    /*
+     * pack all images into bin.
+     * if there is no image storage in this atlas packer.
+     * then ignore.
+     */
+    void PackBin();
+    /*
+     * export atlas.
+     * if there is no image to export.
+     * then ignore.
+     */
+    void ExportAtlas(QString relative_path);
+    bool IsEmpty();
 };
 
 #endif //ATLASGENERATOR_ATLAS_PACKER_H

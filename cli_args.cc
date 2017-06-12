@@ -61,7 +61,7 @@ void Args::ParseCommandLine(const QCoreApplication &application)
             QStringList() << "e" << "extrude",
             "Repeat the sprite's pixels at the borders.",
             "vvvvname",
-            "0"
+            "1"
     );
     QCommandLineOption include_images_option(
             QStringList() << "includeImages",
@@ -76,7 +76,7 @@ void Args::ParseCommandLine(const QCoreApplication &application)
             QStringList() << "p" << "tilePadding",
             "Tile padding is the space between sprites. Value adds transparent pixels between sprites to avoid artifacts from neighbor sprites. The transparent pixels are not added to the sprites. Default is 2.",
             "padding",
-            "2"
+            "1"
     );
     QCommandLineOption force_option(
             QStringList() << "f" << "force",

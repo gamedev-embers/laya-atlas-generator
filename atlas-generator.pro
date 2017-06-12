@@ -29,7 +29,7 @@ DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000
 # disables all the APIs deprecated before Qt 6.0.0
 
 HEADERS += \
-    log.h \
-    utils.h \
-    cli_args.h \
-    atlas_packer.h
+    log.height \
+    utils.height \
+    cli_args.height \
+    atlas_packer.height

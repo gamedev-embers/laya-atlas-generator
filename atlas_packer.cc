@@ -8,42 +8,52 @@
 #include <iomanip>
 
 #include "atlas_packer.h"
+#include "utils.h"
 #include "cli_args.h"
+#include "json_export.h"
 
 using FreeRectChoiceHeuristic = rbp::MaxRectsBinPack::FreeRectChoiceHeuristic;
 using rbp::MaxRectsBinPack;
 using rbp::Rect;
+using rbp::RectSize;
 using std::accumulate;
 using std::min;
 using std::cout;
 using std::setw;
+using std::vector;
 
-AtlasPacker::AtlasPacker()
+AtlasPacker::AtlasPacker() :
+        sheet_index(0),
+        bin_pack(),
+        images(),
+        canvases(),
+        data_export(new JsonExport)
 {
-    sheet_index = 0;
 }
 
-int AtlasPacker::getCeilPowOfTwo(int value)
+AtlasPacker::~AtlasPacker()
 {
-    int retVal = 1;
-    while (retVal < value)
-        retVal <<= 1;
-    return retVal;
+    // free canvases.
+    for (int i = 0; i < canvases.size(); ++i)
+    {
+        delete canvases[i];
+        canvases[i] = nullptr;
+    }
 }
 
-QImage* AtlasPacker::ImageCropAlpha(const QImage *input, Bounds &new_bounds)
+QImage *AtlasPacker::ImageCropAlpha(const QImage *input, Rect &new_bounds)
 {
     int x = 0, y = 0, w = input->width(), h = input->height();
 
     // crop top
-    for(int row = 0; row < input->height(); ++row)
+    for (int row = 0; row < input->height(); ++row)
     {
         uchar result = accumulate(
                 input->scanLine(row),
                 input->scanLine(row) + input->bytesPerLine(),
                 0,
                 std::bit_or<uchar>());
-        if(result != 0)
+        if (result != 0)
         {
             y = row;
             break;
@@ -51,36 +61,34 @@ QImage* AtlasPacker::ImageCropAlpha(const QImage *input, Bounds &new_bounds)
     }
 
     // crop bottom
-    for(int row = input->height() - 1; row >= 0; --row)
+    for (int row = input->height() - 1; row >= 0; --row)
     {
         uchar result = accumulate(
                 input->scanLine(row),
                 input->scanLine(row) + input->bytesPerLine(),
                 0,
                 std::bit_or<uchar>());
-        if(result != 0)
+        if (result != 0)
         {
-            h = row - y;
+            h = row - y + 1;
             break;
         }
-
-        ++new_bounds.bottom;
     }
 
     // crop left
-    for(int col = 0; col < input->width(); ++col)
+    for (int col = 0; col < input->width(); ++col)
     {
         uchar result = 0;
-        for(int row = 0; row < input->height(); ++row)
+        for (int row = 0; row < input->height(); ++row)
         {
-            const uchar* pixel = input->scanLine(row) + col * 4;
+            const uchar *pixel = input->scanLine(row) + col * 4;
             result |= *(pixel + 0);
             result |= *(pixel + 1);
             result |= *(pixel + 2);
             result |= *(pixel + 3);
         }
 
-        if(result != 0)
+        if (result != 0)
         {
             x = col;
             break;
@@ -88,35 +96,34 @@ QImage* AtlasPacker::ImageCropAlpha(const QImage *input, Bounds &new_bounds)
     }
 
     // crop right
-    for(int col = input->width() - 1; col >= 0; --col)
+    for (int col = input->width() - 1; col >= 0; --col)
     {
         uchar result = 0;
-        for(int row = 0; row < input->height(); ++row)
+        for (int row = 0; row < input->height(); ++row)
         {
-            const uchar* pixel = input->scanLine(row) + col * 4;
+            const uchar *pixel = input->scanLine(row) + col * 4;
             result |= *(pixel + 0);
             result |= *(pixel + 1);
             result |= *(pixel + 2);
             result |= *(pixel + 3);
         }
 
-        if(result != 0)
+        if (result != 0)
         {
-            w = col - x;
+            w = col - x + 1;
             break;
         }
-
-        ++new_bounds.right;
     }
 
     new_bounds.x = x;
     new_bounds.y = y;
-    new_bounds.w = w;
-    new_bounds.h = h;
+    new_bounds.width = w;
+    new_bounds.height = h;
     return new QImage(input->copy(x, y, w, h));
 }
 
-QImage *AtlasPacker::ImageExtrude(QImage *input, bool trimmed, Bounds bounds) {
+QImage *AtlasPacker::ImageExtrude(QImage *input, bool trimmed, ImageInfo &image_info)
+{
     int new_width = input->width() + Args::extrude * 2,
             new_height = input->height() + Args::extrude * 2;
 
@@ -124,345 +131,343 @@ QImage *AtlasPacker::ImageExtrude(QImage *input, bool trimmed, Bounds bounds) {
     output->fill(0);
 
     // copy image
-    for(int row = 0; row < input->height(); ++row)
+    for (int row = 0; row < input->height(); ++row)
     {
         memcpy(output->scanLine(row + Args::extrude) + Args::extrude * 4, input->scanLine(row), input->bytesPerLine());
     }
     // ImageExtrude
-    for(int i = 0; i < Args::extrude; ++i)
+    for (int i = 0; i < Args::extrude; ++i)
     {
         // ImageExtrude top
-        if(bounds.y == 0)
+        if (image_info.sprite_source_size.y == 0)
             memcpy(
                     output->scanLine(i) + Args::extrude * 4,
                     input->scanLine(0),
                     input->bytesPerLine());
 
         // ImageExtrude bottom
-        if(bounds.bottom == 0)
+        if (image_info.sprite_source_size.y + image_info.sprite_source_size.height == image_info.source_size.height)
             memcpy(
                     output->scanLine(input->height() + Args::extrude + i) + Args::extrude * 4,
                     input->scanLine(input->height() - 1),
                     input->bytesPerLine());
 
-        for(int row = 0; row < input->height(); ++row)
+        for (int row = 0; row < input->height(); ++row)
         {
             // ImageExtrude left
-            if(bounds.x == 0)
+            if (image_info.sprite_source_size.x == 0)
                 memcpy(
                         output->scanLine(row + Args::extrude) + i * 4,
                         input->scanLine(row),
                         4);
             // ImageExtrude right
-            if(bounds.right == 0)
+            if (image_info.sprite_source_size.x + image_info.sprite_source_size.width == image_info.source_size.width)
                 memcpy(
                         output->scanLine(row + Args::extrude) + (i + Args::extrude + input->width()) * 4,
                         input->scanLine(row) + (input->width() - 1) * 4,
                         4);
         }
     }
-
     return output;
 }
 
 void AtlasPacker::ImageDrawImage(QImage &canvas, const QImage &image, int dest_x, int dest_y)
 {
-    for(int row = 0; row < image.height(); ++row)
+    for (int row = 0; row < image.height(); ++row)
     {
-        for(int col = 0; col < image.width(); ++col)
-        {
-            canvas.setPixel(
-                    dest_x + col,
-                    dest_y + row,
-                    image.pixel(col, row));
-        }
-//        memcpy(
-//                canvas.scanLine(row + dest_y) + dest_x * 4,
-//                image.scanLine(row),
-//                image.bytesPerLine()
-//        );
+//        for (int col = 0; col < image.width(); ++col)
+//        {
+//            canvas.setPixel(
+//                    dest_x + col,
+//                    dest_y + row,
+//                    image.pixel(col, row));
+//        }
+        memcpy(
+                canvas.scanLine(row + dest_y) + dest_x * 4,
+                image.scanLine(row),
+                image.bytesPerLine()
+        );
     }
 }
 
-void AtlasPacker::evaluateAppropriateSize(QVector<ImageInfo> &images, FreeRectChoiceHeuristic choiceHeuristic, Size& opacity_bounds, Size& bin_size)
+void AtlasPacker::ExportAtlas(QString relative_path)
 {
-    int bin_width = 128;
-    int bin_height = 128;
+    if(canvases.empty())
+        return;
 
-//    if (Args::power_of_two)
-//    {
-//        bin_width = getCeilPowOfTwo(bin_width);
-//        bin_height = getCeilPowOfTwo(bin_height);
-//    }
+    // create directories
+    QDir out_dir(Args::output_directory.filePath(relative_path));
+    out_dir.mkpath("..");
 
-//    if (bin_width > Args::max_size)
-//        bin_width = Args::max_size;
-//    if (bin_height > Args::max_size)
-//        bin_height = Args::max_size;
+    QString images;
 
-    const unsigned step = 32;
-    while (!canAccommodate(choiceHeuristic, images, bin_width, bin_height, opacity_bounds))
+    for (int i = 0; i < canvases.size(); ++i)
     {
-        if(Args::power_of_two)
-        {
-            bin_width += step;
-            bin_height += step;
-        }
-        else
-        {
-            if (bin_height < bin_width)
-                bin_width += step;
-            else
-                bin_height += step;
-        }
+        QString file_name = relative_path + (i > 0 ? QString(i) : "") + ".png";
+        QString file_path = Args::output_directory.filePath(file_name);
 
-        if (bin_width > Args::max_size ||
-                bin_height > Args::max_size)
-            break;
+        if(i > 0)
+            images += ',';
+        images += file_name;
 
-        opacity_bounds.w = 0;
-        opacity_bounds.h = 0;
+        canvases[i]->save(file_path);
+        cout << "SAVE " << file_path.toStdString() << "\n";
     }
 
-    bin_size.w = bin_width;
-    bin_size.h = bin_height;
+    QString data_export_file = Args::output_directory.filePath(relative_path + ".atlas");
+    data_export->SetMetaImages(images);
+    data_export->Export(data_export_file);
+    cout << "SAVE " << data_export_file.toStdString() << "\n\n";
 }
 
-bool AtlasPacker::canAccommodate(
-        FreeRectChoiceHeuristic choice_heuristic,
-        QVector<ImageInfo> &images,
-        int w, int h,
-        Size& opacity_size)
+bool AtlasPacker::AddImage(QString filename)
 {
-    bin_pack.Init(w + Args::shape_padding, h + Args::shape_padding);
-    for (ImageInfo &imgInfo : images)
+    QImage *image = new QImage(filename);
+
+    // this indicate <filename> is not a image.
+    if (image->isNull())
     {
-        const Bounds &bounds = imgInfo.spriteSourceSize;
-
-        Rect result = bin_pack.Insert(
-                imgInfo.image->width()  + Args::shape_padding,
-                imgInfo.image->height() + Args::shape_padding,
-                choice_heuristic);
-
-        opacity_size.w = std::max(
-                opacity_size.w,
-                result.x + result.width + Args::extrude * 2 - Args::shape_padding);
-        opacity_size.h = std::max(
-                opacity_size.h,
-                result.y + result.height + Args::extrude * 2 - Args::shape_padding);
-
-        if (result.width == 0)
-            return false;
+        return false;
     }
+
+    // convert image format to ARGB32
+    if (image->format() != QImage::Format_ARGB32)
+    {
+        auto new_image = image->convertToFormat(QImage::Format_ARGB32);
+        delete image;
+        image = new QImage(new_image);
+    }
+
+    // print information. We are loading image now.
+    cout << "LOAD "
+         << file_utils::GetRelativeToInputDirectoryPath(filename).toStdString()
+         << "\n";
+
+    ImageInfo image_info;
+    image_info.image = image;
+    image_info.filename = filename;
+
+    // storage image information
+    images.push_back(image_info);
 
     return true;
 }
 
-void AtlasPacker::storageHeuristicResult(QVector<ImageInfo> &images, QVector<HeuristicResult> &heuristic_results, MaxRectsBinPack::FreeRectChoiceHeuristic choiceHeuristic)
+void AtlasPacker::PackBin()
 {
-    Size opacity_size = { 0, 0 };
-    Size bin_size = { 0, 0 };
+    if(!images.size()) return;
 
-    evaluateAppropriateSize(images, choiceHeuristic, opacity_size, bin_size);
-    heuristic_results.push_back({
-                                        choiceHeuristic,
-                                        opacity_size,
-                                        bin_size
-                                });
-}
-
-bool AtlasPacker::Insert(QImage &canvas, ImageInfo &image_info, FreeRectChoiceHeuristic heuristic) {
-    Rect result = bin_pack.Insert(
-            image_info.image->width()  + Args::shape_padding,
-            image_info.image->height() + Args::shape_padding,
-            heuristic
-    );
-
-    if(result.width != image_info.image->width() + Args::shape_padding)
+    std::sort(images.begin(), images.end(), [](const ImageInfo& a, const ImageInfo& b)->bool
     {
-        image_info.rotated = true;
-
-        QMatrix rotate;
-        rotate.rotate(90);
-        QImage rotated_image = image_info.image->transformed(rotate);
-
-        delete image_info.image;
-
-        image_info.image = new QImage(rotated_image);
-    }
-
-    QFileInfo file(image_info.filename);
-    cout
-            << setw(30)
-            << file.fileName().toStdString()
-            << " ("
-            << setw(5)
-            << result.x << " "
-            << setw(5)
-            << result.y << " "
-            << setw(5)
-            << result.width << " "
-            << setw(4)
-            << result.height
-            << ")" << "\n";
-
-    if (result.width == 0)
-    {
-        return false;
-    }
-    else
-    {
-        result.width  -= Args::shape_padding;
-        result.height -= Args::shape_padding;
-
-        image_info.frame = {
-                result.x + Args::extrude,
-                result.y + Args::extrude,
-                result.width - Args::extrude * 2,
-                result.height - Args::extrude * 2,
-                sheet_index
-        };
-
-        ImageDrawImage(canvas, *image_info.image, result.x, result.y);
-
-        return true;
-    }
-}
-
-void AtlasPacker::PackImages(QVector<ImageInfo> &images, const QDir &in_dir) {
-    // sort images by area.
-    auto CompareImageArea = [](const ImageInfo &a, const ImageInfo &b) -> bool {
-        QImage *image_a = a.image;
-        QImage *image_b = b.image;
-
-        return image_a->width() * image_a->height() > image_b->width() * image_b->height();
-    };
-//    std::sort(images.begin(), images.end(), CompareImageArea);
+        return a.image->width() * a.image->height() > b.image->width() * b.image->height();
+    });
 
     for (ImageInfo &imageInfo : images)
     {
         QImage *image = imageInfo.image;
 
-        imageInfo.sourceSize.w = image->width();
-        imageInfo.sourceSize.h = image->height();
+        // set origin image size.
+        imageInfo.source_size.width  = image->width();
+        imageInfo.source_size.height = image->height();
 
-        if (Args::crop_alpha) {
-            image = ImageCropAlpha(image, imageInfo.spriteSourceSize);
+        // crop alpha if needed.
+        if (Args::crop_alpha)
+        {
+            image = ImageCropAlpha(image, imageInfo.sprite_source_size);
 
             if (
-                    imageInfo.spriteSourceSize.x != 0 ||
-                    imageInfo.spriteSourceSize.y != 0 ||
-                    imageInfo.spriteSourceSize.w != imageInfo.image->width() ||
-                    imageInfo.spriteSourceSize.h != imageInfo.image->height())
+                    imageInfo.sprite_source_size.x != 0 ||
+                    imageInfo.sprite_source_size.y != 0 ||
+                    imageInfo.sprite_source_size.width != imageInfo.image->width() ||
+                    imageInfo.sprite_source_size.height != imageInfo.image->height())
                 imageInfo.trimmed = true;
 
             delete imageInfo.image;
             imageInfo.image = image;
         }
 
-        if (Args::extrude) {
-            image = ImageExtrude(image, imageInfo.trimmed, imageInfo.spriteSourceSize);
+        // extrude if needed.
+        if (Args::extrude)
+        {
+            image = ImageExtrude(image, imageInfo.trimmed, imageInfo);
             delete imageInfo.image;
             imageInfo.image = image;
         }
     }
 
-    // get export atlas filename.
-    QDir in_parent(in_dir);
-    in_parent.cdUp();
-
-    QString relative = Args::input_directory.relativeFilePath(in_parent.path());
-    QDir    out_dir(Args::output_directory.filePath(relative));
-    QString output_name = in_dir.dirName() + ".png";
-
-    QDir().mkpath(out_dir.path());
-
-    export_dir = out_dir.filePath(output_name);
-    bool make_absolute_success = export_dir.makeAbsolute();
-    assert(make_absolute_success);
-    generateAtlas(images);
+    GenerateAtlas();
 }
 
-void AtlasPacker::ExportAtlas(const QImage &canvas)
+void AtlasPacker::GenerateAtlas()
 {
-    canvas.save(export_dir.path());
-    cout << "SAVE " << export_dir.path().toStdString() << "\n\n";
-}
-
-void AtlasPacker::generateAtlas(QVector<ImageInfo> &images) {
-
     // 计算各种排列方式的优劣
-    QVector<HeuristicResult> heuristic_result;
+    QVector<HeuristicResult> heuristic_results;
 
-    storageHeuristicResult(images, heuristic_result, MaxRectsBinPack::RectBestAreaFit);
-    storageHeuristicResult(images, heuristic_result, MaxRectsBinPack::RectBestLongSideFit);
-    storageHeuristicResult(images, heuristic_result, MaxRectsBinPack::RectBestShortSideFit);
-    storageHeuristicResult(images, heuristic_result, MaxRectsBinPack::RectBottomLeftRule);
-    storageHeuristicResult(images, heuristic_result, MaxRectsBinPack::RectContactPointRule);
+    StorageInsertResult(heuristic_results, MaxRectsBinPack::RectBestAreaFit);
+    StorageInsertResult(heuristic_results, MaxRectsBinPack::RectBestLongSideFit);
+    StorageInsertResult(heuristic_results, MaxRectsBinPack::RectBestShortSideFit);
+    StorageInsertResult(heuristic_results, MaxRectsBinPack::RectBottomLeftRule);
+    StorageInsertResult(heuristic_results, MaxRectsBinPack::RectContactPointRule);
 
-    // 找出最小代价的排列方式
-    std::sort(heuristic_result.begin(), heuristic_result.end(), [](
-            const HeuristicResult &resultA, const HeuristicResult &resultB
-    ) -> bool {
-        const Size &opacity_sizeA = resultA.opacity_size;
-        const Size &opacity_sizeB = resultB.opacity_size;
+    // sort by the number of inserted images.
+    std::sort(
+            heuristic_results.begin(),
+            heuristic_results.end(),
+            [](const HeuristicResult &a, const HeuristicResult &b) -> bool
+            {
+                return a.images.size() < b.images.size();
+            });
+    // stable sort by size of bin.
+    std::stable_sort(
+            heuristic_results.begin(),
+            heuristic_results.end(),
+            [](const HeuristicResult &a, const HeuristicResult &b) -> bool
+            {
+                return a.bin_size.width * a.bin_size.height <
+                       b.bin_size.width * b.bin_size.height;
+            });
 
-        return opacity_sizeA.w * opacity_sizeA.h < opacity_sizeB.w * opacity_sizeB.h;
-    });
+    HeuristicResult best_method = heuristic_results.at(0);
+    cout << "Canvas Size: (" << best_method.bin_size.width << ", " << best_method.bin_size.height << ")\n";
 
-    int max_tile_width = 0;
-    int max_tile_height = 0;
+    QImage *canvas = new QImage(best_method.opacity_size.width, best_method.opacity_size.height, QImage::Format_ARGB32);
+    canvas->fill(0);
 
-    std::for_each(images.cbegin(), images.cend(),
-                  [&max_tile_width, &max_tile_height](const ImageInfo &imageInfo) -> void {
-                      const Bounds &bounds = imageInfo.spriteSourceSize;
-                      max_tile_width = bounds.w > max_tile_width ? bounds.w : max_tile_width;
-                      max_tile_height = bounds.h > max_tile_height ? bounds.h : max_tile_height;
-                  });
+    data_export->Clear();
 
-    // 取出第一个元素，即最低消耗排列
-    MaxRectsBinPack::FreeRectChoiceHeuristic choiceHeuristic = heuristic_result.at(0).heuristic;
-    const Size &opacity_size = heuristic_result.at(0).opacity_size;
-    const Size &bin_size = heuristic_result.at(0).bin_size;
+    for (int i = 0; i < best_method.images.size(); ++i)
+    {
+        Rect& rect = best_method.rects.at(i);
+        ImageInfo& image_info = best_method.images.at(i);
 
-    int opacity_width = opacity_size.w;
-    int opacity_height = opacity_size.h;
+        if (rect.width != image_info.image->width())
+        {
+            image_info.rotated = true;
 
-    // 如果指定<powerOfTwo>，将宽高设置成2的整次幂。
-    if (Args::power_of_two) {
-        opacity_width = getCeilPowOfTwo(opacity_width);
-        opacity_height = getCeilPowOfTwo(opacity_height);
-        opacity_width = min(opacity_width, Args::max_size);
-        opacity_height = min(opacity_height, Args::max_size);
+            QMatrix rotate;
+            rotate.rotate(90);
+            QImage rotated_image = image_info.image->transformed(rotate);
 
-        while (opacity_width < max_tile_width)
-            opacity_width *= 2;
-        while (opacity_height < max_tile_height)
-            opacity_height *= 2;
+            delete image_info.image;
+
+            image_info.image = new QImage(rotated_image);
+        }
+
+        cout
+                << setw(30) << std::left
+                << file_utils::GetRelativeToInputDirectoryPath(image_info.filename).toStdString()
+                << " ("
+                << setw(5) << rect.x << setw(5) << rect.y
+                << setw(5) << rect.width << setw(4) << rect.height
+                << ")"
+                << "\n";
+
+        image_info.frame.x = rect.x;
+        image_info.frame.y = rect.y;
+        image_info.frame.width = rect.width;
+        image_info.frame.height = rect.height;
+
+        data_export->AddImageDescription(image_info);
+        ImageDrawImage(*canvas, *(image_info.image), rect.x, rect.y);
+
+        // remove the image we had processed.
+        images.erase(images.begin());
     }
 
-    // Reset.
-    bin_pack.Init(bin_size.w + Args::shape_padding, bin_size.h + Args::shape_padding);
-    QImage canvas(bin_size.w + Args::shape_padding, bin_size.h + Args::shape_padding, QImage::Format_ARGB32);
+    // if all images have processed, images's size will be zero.
+    if(images.size())
+    {
+        GenerateAtlas();
+    }
 
-    while (images.size() > 0) {
-        ImageInfo &imageInfo = images.front();
+    canvases.push_back(canvas);
+}
 
-        bool success = Insert(canvas, imageInfo, choiceHeuristic);
+void AtlasPacker::StorageInsertResult(QVector<HeuristicResult> &heuristic_results,
+                                      MaxRectsBinPack::FreeRectChoiceHeuristic method)
+{
+    // bin's initial size.
+    int bin_width = 64;
+    int bin_height = 64;
 
-        if (success)
+    HeuristicResult heuristic_result;
+
+    while (true)
+    {
+        heuristic_result.opacity_size.width  = 0;
+        heuristic_result.opacity_size.height = 0;
+
+        bool can_accommodate = Insert(bin_width, bin_height, heuristic_result, method);
+        if (can_accommodate)
+            break;
+
+        if (Args::power_of_two)
         {
-            images.removeFirst();
-//            jsonDataFormat.addFrame(packResult);
+            if (bin_height >= bin_width)
+                bin_width *= 2;
+            else
+                bin_height *= 2;
         } else
         {
-//            ExportAtlas(canvas);
-            ++sheet_index;
-            generateAtlas(images);
-//            return;
+            float w_ceil_pot = (float) math_utils::CeilPOT(bin_width);
+            float h_ceil_pot = (float) math_utils::CeilPOT(bin_height);
+            if(w_ceil_pot == h_ceil_pot)
+                w_ceil_pot *= 2;
+            float expect_ratio = w_ceil_pot / h_ceil_pot;
+            float now_ratio    = (float) bin_width / (float)bin_height;
+            if (now_ratio < expect_ratio)
+                bin_width += 32;
+            else
+                bin_height += 32;
         }
+
+        // limit bin'size lower than max size.
+        if (bin_width > Args::max_size && bin_height > Args::max_size)
+            break;
     }
 
-    ExportAtlas(canvas);
-//    exportData();
+    heuristic_results.push_back(heuristic_result);
+}
+
+bool AtlasPacker::Insert(int bin_width, int bin_height, HeuristicResult &result, rbp::MaxRectsBinPack::FreeRectChoiceHeuristic method)
+{
+    bin_pack.Init(bin_width + Args::shape_padding, bin_height + Args::shape_padding);
+
+    for(ImageInfo& image_info : images)
+    {
+        // rect to insert must plus shape padding.
+        Rect rect = bin_pack.Insert(
+                image_info.image->width()  + Args::shape_padding,
+                image_info.image->height() + Args::shape_padding,
+                method);
+
+        if(rect.width == 0)
+        {
+            result.rects.clear();
+            result.images.clear();
+            return false;
+        }
+
+        // after we retrieve bounds in bin, we subtract bounds'size from shape padding.
+        rect.width  -= Args::shape_padding;
+        rect.height -= Args::shape_padding;
+
+        result.opacity_size.width  = std::max(result.opacity_size.width,  rect.x + rect.width);
+        result.opacity_size.height = std::max(result.opacity_size.height, rect.y + rect.height);
+
+        result.rects.push_back(rect);
+        result.images.push_back(image_info);
+    }
+
+    result.bin_size.width  = bin_width;
+    result.bin_size.height = bin_height;
+    result.occupancy = bin_pack.Occupancy();
+    result.method = method;
+
+    return true;
+}
+
+bool AtlasPacker::IsEmpty()
+{
+    return images.empty();
 }

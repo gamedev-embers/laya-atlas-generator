@@ -18,7 +18,9 @@ set(SOURCE_FILES
         atlas_packer.cc
         cli_args.cc
         main.cc
-        utils.cc)
+        utils.cc
+        data_export.h
+        json_export.cpp)
 
 add_executable(atlas_generator ${SOURCE_FILES})
 target_link_libraries(atlas_generator Qt5::Widgets)

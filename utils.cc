@@ -8,6 +8,8 @@
 #include "utils.h"
 #include "cli_args.h"
 
+using std::string;
+
 void file_utils::Copy(const QString &from, const QString &to)
 {
     QString command, arg;
@@ -40,4 +42,16 @@ void ::file_utils::CopyToResourceDirectory(const QString &path)
 
     QString to_path = Args::resource_directory.filePath(relative_path);
     Copy(path, to_path);
+}
+
+QString file_utils::GetRelativeToInputDirectoryPath(QString path)
+{
+    return Args::input_directory.relativeFilePath(path);
+}
+
+int ::math_utils::CeilPOT(int value)
+{
+    int val = 2;
+    while(val < value) value *= 2;
+    return val;
 }

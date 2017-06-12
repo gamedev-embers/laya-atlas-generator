@@ -14,6 +14,12 @@
 
 using std::cout;
 using std::cerr;
+using std::vector;
+
+// pre-definitions.
+void ProcessFile(const QFileInfo &file_info, AtlasPacker& atlas_packer, vector<QDir>& directories);
+void ProcessRegularFile(QString filename, AtlasPacker &atlas_packer);
+void GenerateAtlas(AtlasPacker& atlas_packer, const QDir &dir);
 
 // 检查资源（输入目录下的所有文件）是否被修改过（自上次打包）。
 // 在资源已修改的情况下，将在调用处继续执行程序。
@@ -25,7 +31,7 @@ void CheckResourceModification()
     // 用户指定了强制打包时，不需要检查后续步骤
     if (Args::force)
     {
-        cout << "Force publication.\n";
+        cout << "Force Publication.\n";
         return;
     }
 
@@ -38,7 +44,7 @@ void CheckResourceModification()
 
     if (record_file.exists())
     {
-        if(record_file.open(QFile::ReadOnly))
+        if (record_file.open(QFile::ReadOnly))
         {
             QString prev_pack_time;
             QTextStream in(&record_file);
@@ -52,7 +58,7 @@ void CheckResourceModification()
     // 覆盖打包记录
     if (need_repack)
     {
-        if(record_file.open(QFile::WriteOnly))
+        if (record_file.open(QFile::WriteOnly))
         {
             QTextStream out(&record_file);
             out << last_write_time
@@ -73,86 +79,70 @@ void CheckResourceModification()
 void PackDirectory(const QDir &dir)
 {
     // 检查目录是否被用户排除
-    if(Args::isExclude(QFileInfo(dir.path())))
+    if (Args::isExclude(QFileInfo(dir.path())))
     {
         cout << "EXCLUDE " << dir.absolutePath().toStdString() << "\n";
         file_utils::CopyToResourceDirectory(dir.path());
         return;
     }
 
-    QVector<ImageInfo> images;
-    QVector<QDir> dirs;
+    vector<QDir> directories;
     // 处理指定目录下所有文件
     QFileInfoList file_list = dir.entryInfoList(QDir::Files | QDir::Dirs | QDir::NoDotAndDotDot);
-    for (int i = 0; i < file_list.size(); ++i)
-    {
-        QFileInfo file_info = file_list.at(i);
-        QString file_path = file_info.filePath();
-        // 检查到目录
-        if(file_info.isDir())
-        {
-            dirs.push_back(QDir(file_path));
-        }
-        // 检查到常规文件
-        else
-        {
-            // 检查文件是否被用户排除
-            if(Args::isExclude(QFileInfo(file_path)))
-            {
-                cout << "EXCLUDE " << file_path.toStdString() << "\n";
-                file_utils::CopyToResourceDirectory(file_path);
-                continue;
-            }
 
-            // 尝试当作图片加载
-            // 加载失败则复制到资源目录
-            // 加载成功则push入images，稍后会打包这些images
-            QImage *image = new QImage(file_path);
-            if(image->isNull())
-            {
-                cout << "NOT IMAGE " << file_path.toStdString() << "\n";
-                file_utils::CopyToResourceDirectory(file_path);
-            }
-            else
-            {
-                if(image->format() != QImage::Format_ARGB32)
-                {
-                    auto new_image = image->convertToFormat(QImage::Format_ARGB32);
-                    delete image;
-                    image = new QImage(new_image);
-                }
+    AtlasPacker atlas_packer;
 
-                cout << "LOAD " << Args::input_directory.relativeFilePath(file_path).toStdString() << "\n";
-                images.push_back(
-                        {
-                                image,
-                                file_path
-                        });
-            }
-        }
-    }
+    for(QFileInfo& file_info : file_list)
+        ProcessFile(file_info, atlas_packer, directories);
 
-    // 处理图片文件
-    if(images.size() > 0)
-    {
-        AtlasPacker atlas_packer;
-        atlas_packer.PackImages(images, dir);
+    cout << "\n";
 
-        // free images
-        for(ImageInfo &imageInfo : images)
-        {
-            delete imageInfo.image;
-            imageInfo.image = nullptr;
-        }
-        images.empty();
-    }
+    GenerateAtlas(atlas_packer, dir);
 
     // 打包子目录
-    while(dirs.size() > 0)
+    while (directories.size() > 0)
     {
-         PackDirectory(dirs.back());
-        dirs.pop_back();
+        PackDirectory(directories.back());
+        directories.pop_back();
     }
+}
+
+void GenerateAtlas(AtlasPacker& atlas_packer, const QDir &dir)
+{
+    if(atlas_packer.IsEmpty())
+        return;
+
+    atlas_packer.PackBin();
+
+    // get export atlas filename.
+    QString relative = Args::input_directory.relativeFilePath(dir.path());
+    atlas_packer.ExportAtlas(relative);
+}
+
+void ProcessFile(const QFileInfo &file_info, AtlasPacker &atlas_packer, vector<QDir> &directories)
+{
+    QString file_path = file_info.filePath();
+    // 检查到目录
+    if (file_info.isDir())
+        directories.push_back(QDir(file_path));
+    // 检查到常规文件
+    else
+        ProcessRegularFile(file_path, atlas_packer);
+}
+
+void ProcessRegularFile(QString filename, AtlasPacker &atlas_packer)
+{
+    // 检查文件是否被用户排除
+    bool is_exclude = Args::isExclude(QFileInfo(filename));
+    if (is_exclude)
+        cout << "EXCLUDE " << filename.toStdString() << "\n";
+
+    bool is_image = atlas_packer.AddImage(filename);
+    if (!is_image)
+        cout << "NOT IMAGE " << filename.toStdString() << "\n";
+
+    if(is_exclude || !is_image)
+        file_utils::CopyToResourceDirectory(filename);
 }
 
 int main(int argc, char **argv)
