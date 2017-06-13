@@ -24,7 +24,9 @@ QDir Args::resource_directory;
 
 int Args::max_size, Args::tile_size;
 int Args::shape_padding;
-QString Args::textureFormat;
+
+QImage::Format Args::pixel_format;
+int Args::texture_qulity;
 
 QVector<QFileInfo> Args::exclude_files;
 
@@ -32,6 +34,7 @@ int Args::extrude;
 bool Args::crop_alpha;
 bool Args::force;
 bool Args::power_of_two;
+bool Args::rotate;
 
 void Args::ParseCommandLine(const QCoreApplication &application)
 {
@@ -89,10 +92,19 @@ void Args::ParseCommandLine(const QCoreApplication &application)
             QStringList() << "c" << "cropAlpha",
             "If source sprites should be cropped to their transparency bounds to pack them even tighter."
     );
-    QCommandLineOption texture_format_option(
-            QStringList() << "f" << "textFormat",
-            "Choose the output texture format. Support png32 and png8 now.",
-            "png8"
+    QCommandLineOption rotate_option(
+            QStringList() << "r" << "rotate",
+            "Allow sprite rotation to fit area better."
+    );
+    QCommandLineOption pixel_format_option(
+            QStringList() << "m" << "format",
+            "Choose the output texture pixel format. Mono | MonoLSB | Indexed8 | RGB32 | ARGB32 | ARGB32_Premultiplied | RGB16 | ARGB8565_Premultiplied | RGB666 | ARGB6666_Premultiplied | RGB555 | ARGB8555_Premultiplied | RGB888 | RGB444 | ARGB4444_Premultiplied | RGBX8888 | RGBA8888 | RGBA8888_Premultiplied | BGR30 | A2BGR30_Premultiplied | RGB30 | A2RGB30_Premultiplied | Alpha8 | Grayscale8",
+            "pixel format", "ARGB32"
+    );
+    QCommandLineOption texture_quality_option(
+            QStringList() << "q" << "textureQuality",
+            "",
+            "texture quality", "-1"
     );
     QCommandLineOption init_option(
             QStringList() << "init",
@@ -116,7 +128,9 @@ void Args::ParseCommandLine(const QCoreApplication &application)
     command_line_parser.addOption(force_option);
     command_line_parser.addOption(power_of_2_option);
     command_line_parser.addOption(crop_alpha_option);
-    command_line_parser.addOption(texture_format_option);
+    command_line_parser.addOption(rotate_option);
+    command_line_parser.addOption(pixel_format_option);
+    command_line_parser.addOption(texture_quality_option);
     command_line_parser.addOption(init_option);
 
     command_line_parser.addHelpOption();
@@ -130,14 +144,17 @@ void Args::ParseCommandLine(const QCoreApplication &application)
     SetupOutputDirectory  (command_line_parser.isSet(output_option),   command_line_parser.value(output_option));
     SetupResourceDirectory(command_line_parser.isSet(resource_option), command_line_parser.value(resource_option));
     SetupExcludeDirectory (command_line_parser.isSet(exclude_images_option),  command_line_parser.value(exclude_images_option));
+    SetupPixelFormat      (command_line_parser.value(pixel_format_option));
 
-    extrude = std::stoi(command_line_parser.value(extrude_option).toStdString());
-    max_size = std::stoi(command_line_parser.value(max_size_option).toStdString());
-    tile_size = std::stoi(command_line_parser.value(tile_size_option).toStdString());
+    extrude = command_line_parser.value(extrude_option).toInt();
+    max_size = command_line_parser.value(max_size_option).toInt();
+    tile_size = command_line_parser.value(tile_size_option).toInt();
     shape_padding = std::stoi(command_line_parser.value(tile_padding_option).toStdString());
     power_of_two = command_line_parser.isSet(power_of_2_option);
     crop_alpha = command_line_parser.isSet(crop_alpha_option);
+    rotate = command_line_parser.isSet(rotate_option);
     force = command_line_parser.isSet(force_option);
+    texture_qulity = command_line_parser.value(texture_quality_option).toInt();
 }
 
 void Args::SetupInputDirectory(const QStringList &positional_arguments)
@@ -230,4 +247,58 @@ bool ::Args::isExclude(const QFileInfo &file)
 {
     auto find_index = std::find(exclude_files.cbegin(), exclude_files.cend(), file);
     return find_index != exclude_files.cend();
+}
+
+void Args::SetupPixelFormat(QString pixel_formamt_string)
+{
+    if(pixel_formamt_string == "Mono")
+        pixel_format = QImage::Format::Format_Mono;
+    else if(pixel_formamt_string == "MonoLSB")
+        pixel_format = QImage::Format::Format_MonoLSB;
+    else if(pixel_formamt_string == "Indexed8")
+        pixel_format = QImage::Format::Format_Indexed8;
+    else if(pixel_formamt_string == "RGB32")
+        pixel_format = QImage::Format::Format_RGB32;
+    else if(pixel_formamt_string == "ARGB32")
+        pixel_format = QImage::Format::Format_ARGB32;
+    else if(pixel_formamt_string == "ARGB32_Premultiplied")
+        pixel_format = QImage::Format::Format_ARGB32_Premultiplied;
+    else if(pixel_formamt_string == "RGB16")
+        pixel_format = QImage::Format::Format_RGB16;
+    else if(pixel_formamt_string == "ARGB8565_Premultiplied")
+        pixel_format = QImage::Format::Format_ARGB8565_Premultiplied;
+    else if(pixel_formamt_string == "RGB666")
+        pixel_format = QImage::Format::Format_RGB666;
+    else if(pixel_formamt_string == "ARGB6666_Premultiplied")
+        pixel_format = QImage::Format::Format_ARGB6666_Premultiplied;
+    else if(pixel_formamt_string == "RGB555")
+        pixel_format = QImage::Format::Format_RGB555;
+    else if(pixel_formamt_string == "ARGB8555_Premultiplied")
+        pixel_format = QImage::Format::Format_ARGB8555_Premultiplied;
+    else if(pixel_formamt_string == "RGB888")
+        pixel_format = QImage::Format::Format_RGB888;
+    else if(pixel_formamt_string == "RGB444")
+        pixel_format = QImage::Format::Format_RGB444;
+    else if(pixel_formamt_string == "ARGB4444_Premultiplied")
+        pixel_format = QImage::Format::Format_ARGB4444_Premultiplied;
+    else if(pixel_formamt_string == "RGBX8888")
+        pixel_format = QImage::Format::Format_RGBX8888;
+    else if(pixel_formamt_string == "RGBA8888")
+        pixel_format = QImage::Format::Format_RGBA8888;
+    else if(pixel_formamt_string == "RGBA8888_Premultiplied")
+        pixel_format = QImage::Format::Format_RGBA8888_Premultiplied;
+    else if(pixel_formamt_string == "BGR30")
+        pixel_format = QImage::Format::Format_BGR30;
+    else if(pixel_formamt_string == "A2BGR30_Premultiplied")
+        pixel_format = QImage::Format::Format_A2BGR30_Premultiplied;
+    else if(pixel_formamt_string == "RGB30")
+        pixel_format = QImage::Format::Format_RGB30;
+    else if(pixel_formamt_string == "A2RGB30_Premultiplied")
+        pixel_format = QImage::Format::Format_A2RGB30_Premultiplied;
+    else if(pixel_formamt_string == "Alpha8")
+        pixel_format = QImage::Format::Format_Alpha8;
+    else if(pixel_formamt_string == "Grayscale8")
+        pixel_format = QImage::Format::Format_Grayscale8;
+    else
+        std::cerr << "NO FORMAT " << pixel_formamt_string.toStdString() << '\n';
 }

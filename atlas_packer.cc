@@ -203,16 +203,27 @@ void AtlasPacker::ExportAtlas(QString relative_path)
 
     for (int i = 0; i < canvases.size(); ++i)
     {
-        QString file_name = relative_path + (i > 0 ? QString(i) : "") + ".png";
+        QString file_name = relative_path + (i > 0 ? std::to_string(i).c_str() : "") + ".png";
         QString file_path = Args::output_directory.filePath(file_name);
 
         if(i > 0)
             images += ',';
         images += file_name;
 
-        canvases[i]->save(file_path);
+        bool need_free = false;
+        QImage* canvas = canvases[i];
+        if(Args::pixel_format != canvas->format())
+        {
+            need_free = true;
+            canvas = new QImage(canvas->convertToFormat(Args::pixel_format));
+        }
+        canvas->save(file_path, nullptr, Args::texture_qulity);
+        if(need_free)
+            delete canvas;
         cout << "SAVE " << file_path.toStdString() << "\n";
     }
+
+
 
     QString data_export_file = Args::output_directory.filePath(relative_path + ".atlas");
     data_export->SetMetaImages(images);
@@ -257,41 +268,50 @@ void AtlasPacker::PackBin()
 {
     if(!images.size()) return;
 
+    data_export->Clear();
+
     std::sort(images.begin(), images.end(), [](const ImageInfo& a, const ImageInfo& b)->bool
     {
         return a.image->width() * a.image->height() > b.image->width() * b.image->height();
     });
 
-    for (ImageInfo &imageInfo : images)
+    for (ImageInfo &image_info : images)
     {
-        QImage *image = imageInfo.image;
+        QImage *image = image_info.image;
 
         // set origin image size.
-        imageInfo.source_size.width  = image->width();
-        imageInfo.source_size.height = image->height();
+        image_info.source_size.width  = image->width();
+        image_info.source_size.height = image->height();
 
         // crop alpha if needed.
         if (Args::crop_alpha)
         {
-            image = ImageCropAlpha(image, imageInfo.sprite_source_size);
+            image = ImageCropAlpha(image, image_info.sprite_source_size);
 
             if (
-                    imageInfo.sprite_source_size.x != 0 ||
-                    imageInfo.sprite_source_size.y != 0 ||
-                    imageInfo.sprite_source_size.width != imageInfo.image->width() ||
-                    imageInfo.sprite_source_size.height != imageInfo.image->height())
-                imageInfo.trimmed = true;
+                    image_info.sprite_source_size.x != 0 ||
+                    image_info.sprite_source_size.y != 0 ||
+                    image_info.sprite_source_size.width != image_info.image->width() ||
+                    image_info.sprite_source_size.height != image_info.image->height())
+                    image_info.trimmed = true;
 
-            delete imageInfo.image;
-            imageInfo.image = image;
+            delete image_info.image;
+            image_info.image = image;
+        }
+        else
+        {
+            image_info.sprite_source_size.x = 0;
+            image_info.sprite_source_size.y = 0;
+            image_info.sprite_source_size.width = image->width();
+            image_info.sprite_source_size.height = image->height();
         }
 
         // extrude if needed.
         if (Args::extrude)
         {
-            image = ImageExtrude(image, imageInfo.trimmed, imageInfo);
-            delete imageInfo.image;
-            imageInfo.image = image;
+            image = ImageExtrude(image, image_info.trimmed, image_info);
+            delete image_info.image;
+            image_info.image = image;
         }
     }
 
@@ -328,17 +348,17 @@ void AtlasPacker::GenerateAtlas()
             });
 
     HeuristicResult best_method = heuristic_results.at(0);
-    cout << "Canvas Size: (" << best_method.bin_size.width << ", " << best_method.bin_size.height << ")\n";
+    cout << "SIZE bin(" << best_method.bin_size.width << ", " << best_method.bin_size.height << ") "
+         << "canvas(" << best_method.opacity_size.width << ", " << best_method.opacity_size.height << ")\n";
 
     QImage *canvas = new QImage(best_method.opacity_size.width, best_method.opacity_size.height, QImage::Format_ARGB32);
     canvas->fill(0);
-
-    data_export->Clear();
 
     for (int i = 0; i < best_method.images.size(); ++i)
     {
         Rect& rect = best_method.rects.at(i);
         ImageInfo& image_info = best_method.images.at(i);
+        image_info.image_index = canvases.size();
 
         if (rect.width != image_info.image->width())
         {
@@ -356,7 +376,7 @@ void AtlasPacker::GenerateAtlas()
         cout
                 << setw(30) << std::left
                 << file_utils::GetRelativeToInputDirectoryPath(image_info.filename).toStdString()
-                << " ("
+                << "( "
                 << setw(5) << rect.x << setw(5) << rect.y
                 << setw(5) << rect.width << setw(4) << rect.height
                 << ")"
@@ -374,13 +394,14 @@ void AtlasPacker::GenerateAtlas()
         images.erase(images.begin());
     }
 
+    // storage canvas
+    canvases.push_back(canvas);
+
     // if all images have processed, images's size will be zero.
     if(images.size())
     {
         GenerateAtlas();
     }
-
-    canvases.push_back(canvas);
 }
 
 void AtlasPacker::StorageInsertResult(QVector<HeuristicResult> &heuristic_results,
@@ -394,8 +415,11 @@ void AtlasPacker::StorageInsertResult(QVector<HeuristicResult> &heuristic_result
 
     while (true)
     {
+        // clear before pack.
         heuristic_result.opacity_size.width  = 0;
         heuristic_result.opacity_size.height = 0;
+        heuristic_result.images.clear();
+        heuristic_result.rects.clear();
 
         bool can_accommodate = Insert(bin_width, bin_height, heuristic_result, method);
         if (can_accommodate)
@@ -411,8 +435,10 @@ void AtlasPacker::StorageInsertResult(QVector<HeuristicResult> &heuristic_result
         {
             float w_ceil_pot = (float) math_utils::CeilPOT(bin_width);
             float h_ceil_pot = (float) math_utils::CeilPOT(bin_height);
+            // make w_ceil_pot not equal to h_ceil_pot
             if(w_ceil_pot == h_ceil_pot)
-                w_ceil_pot *= 2;
+                w_ceil_pot = std::min((float)Args::max_size, w_ceil_pot * 2);
+
             float expect_ratio = w_ceil_pot / h_ceil_pot;
             float now_ratio    = (float) bin_width / (float)bin_height;
             if (now_ratio < expect_ratio)
@@ -422,8 +448,16 @@ void AtlasPacker::StorageInsertResult(QVector<HeuristicResult> &heuristic_result
         }
 
         // limit bin'size lower than max size.
-        if (bin_width > Args::max_size && bin_height > Args::max_size)
+        if (bin_width >= Args::max_size && bin_height >= Args::max_size)
+        {
+            heuristic_result.bin_size.width  = Args::max_size;
+            heuristic_result.bin_size.height = Args::max_size;
             break;
+        }
+        if(bin_width > Args::max_size)
+            bin_width = Args::max_size;
+        if(bin_height > Args::max_size)
+            bin_height = Args::max_size;
     }
 
     heuristic_results.push_back(heuristic_result);
@@ -443,8 +477,6 @@ bool AtlasPacker::Insert(int bin_width, int bin_height, HeuristicResult &result,
 
         if(rect.width == 0)
         {
-            result.rects.clear();
-            result.images.clear();
             return false;
         }
 

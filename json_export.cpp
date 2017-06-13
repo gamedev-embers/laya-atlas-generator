@@ -50,6 +50,7 @@ void JsonExport::AddImageDescription(const ImageInfo &image_info)
     sprite_object.insert("trimmed", image_info.trimmed);
     sprite_object.insert("spriteSourceSize", sprite_source_size_object);
     sprite_object.insert("sourceSize", source_size_object);
+    sprite_object.insert("idx", image_info.image_index);
 
     frames_object.insert(file_utils::GetRelativeToInputDirectoryPath(image_info.filename), sprite_object);
 }

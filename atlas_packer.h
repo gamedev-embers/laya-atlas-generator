@@ -20,6 +20,7 @@ struct ImageInfo
     rbp::Rect frame;
     bool rotated = false;
     bool trimmed = false;
+    int image_index;
 
     rbp::Rect sprite_source_size;
     rbp::RectSize source_size;

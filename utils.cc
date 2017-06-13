@@ -52,6 +52,6 @@ QString file_utils::GetRelativeToInputDirectoryPath(QString path)
 int ::math_utils::CeilPOT(int value)
 {
     int val = 2;
-    while(val < value) value *= 2;
+    while(val < value) val *= 2;
     return val;
 }
