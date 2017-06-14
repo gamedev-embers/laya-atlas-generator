@@ -15,29 +15,42 @@
 #include <cassert>
 #include <iomanip>
 #include <iostream>
+
 #include "Configuration.h"
 
 // open namespaces
+// ---------------
 using std::cout;
 using std::cerr;
 
 // static member definitions
-QDir cfg::input;
-QDir cfg::inputDirectory;
-QDir cfg::outputDirectory;
-QDir cfg::resourceDirectory;
-int cfg::maxSize, cfg::spriteSize;
-int cfg::shapePadding;
-QImage::Format cfg::pixelFormat;
-int cfg::textureQuality;
-QVector<QFileInfo> cfg::excludeFiles;
-int  cfg::extrude;
-bool cfg::cropAlpha;
-bool cfg::force;
-bool cfg::POT;
-bool cfg::rotate;
+// -------------------------
+// directories
+QDir Configuration::input,
+     Configuration::inputDirectory,
+     Configuration::outputDirectory,
+     Configuration::resourceDirectory;
 
-void cfg::ParseCommandLine(const QCoreApplication &application)
+// sprite properties
+bool Configuration::cropAlpha,
+     Configuration::rotate;
+int Configuration::spriteSize,
+    Configuration::shapePadding,
+    Configuration::extrude;
+
+// texture properties
+QImage::Format Configuration::pixelFormat;
+QString        Configuration::textureFormat;
+int Configuration::textureQuality,
+    Configuration::maxSize;
+bool Configuration::POT;
+
+// other properties
+bool Configuration::force;
+QVector<QFileInfo> Configuration::excludeFiles;
+
+// static function definitions
+void Configuration::ParseCommandLine(const QCoreApplication &application)
 {
     // command line options
     QCommandLineOption outputOption(
@@ -140,48 +153,48 @@ void cfg::ParseCommandLine(const QCoreApplication &application)
     commandLineParser.addHelpOption();
     commandLineParser.addVersionOption();
     commandLineParser.addPositionalArgument("input",
-                                              QCoreApplication::translate("main", "input directory or config file."));
+                                            QCoreApplication::translate("main", "input directory or config file."));
 
     commandLineParser.process(application);
 
     // process user input
     ProcessInitDirective(commandLineParser.isSet(initOption));
 
-    SetupInputDirectory   (commandLineParser.positionalArguments());
-    SetupOutputDirectory  (commandLineParser.isSet(outputOption)         , commandLineParser.value(outputOption));
-    SetupResourceDirectory(commandLineParser.isSet(resourceOption)       , commandLineParser.value(resourceOption));
-    SetupExcludeDirectory (commandLineParser.isSet(excludeImagesOption)  , commandLineParser.value(excludeImagesOption));
-    SetupPixelFormat      (commandLineParser.value(pixelFormatOption));
+    SetupInputDirectory(commandLineParser.positionalArguments());
+    SetupOutputDirectory(commandLineParser.isSet(outputOption), commandLineParser.value(outputOption));
+    SetupResourceDirectory(commandLineParser.isSet(resourceOption), commandLineParser.value(resourceOption));
+    SetupExcludeDirectory(commandLineParser.isSet(excludeImagesOption), commandLineParser.value(excludeImagesOption));
+    SetupPixelFormat(commandLineParser.value(pixelFormatOption));
 
-    extrude        = commandLineParser.value(extrudeOption)        . toInt();
-    maxSize        = commandLineParser.value(maxSizeOption)        . toInt();
-    spriteSize     = commandLineParser.value(spriteSizeOption)     . toInt();
-    shapePadding   = commandLineParser.value(spritePaddingOption)  . toInt();
-    textureQuality = commandLineParser.value(textureQualityOption) . toInt();
-    textureFormat  = commandLineParser.value(textureFormatOption);
-    POT            = commandLineParser.isSet(POTOption);
-    cropAlpha      = commandLineParser.isSet(cropAlphaOption);
-    rotate         = commandLineParser.isSet(rotateOption);
-    force          = commandLineParser.isSet(force_option);
+    extrude         = commandLineParser.value(extrudeOption).toInt();
+    maxSize         = commandLineParser.value(maxSizeOption).toInt();
+    spriteSize      = commandLineParser.value(spriteSizeOption).toInt();
+    shapePadding    = commandLineParser.value(spritePaddingOption).toInt();
+    textureQuality  = commandLineParser.value(textureQualityOption).toInt();
+    textureFormat   = commandLineParser.value(textureFormatOption);
+    POT             = commandLineParser.isSet(POTOption);
+    cropAlpha       = commandLineParser.isSet(cropAlphaOption);
+    rotate          = commandLineParser.isSet(rotateOption);
+    force           = commandLineParser.isSet(force_option);
 }
 
-void cfg::SetupInputDirectory(const QStringList &positional_arguments)
+void Configuration::SetupInputDirectory(const QStringList &positional_arguments)
 {
 //    if (positional_arguments.size() == 1)
 //    {
-        input = QDir(positional_arguments.at(0));
-        bool success = input.makeAbsolute();
-        assert(success);
-        inputDirectory = input;
+    input = QDir(positional_arguments.at(0));
+    bool success = input.makeAbsolute();
+    assert(success);
+    inputDirectory = input;
 
-        if (input.exists())
-        {
-            cout << "input    directory : " << input.path().toStdString() << "\n";
-        } else
-        {
-            cout << "input \"" << input.path().toStdString() << "\" not found.\n";
-            exit(EXIT_FAILURE);
-        }
+    if (input.exists())
+    {
+        cout << "input    directory : " << input.path().toStdString() << "\n";
+    } else
+    {
+        cout << "input \"" << input.path().toStdString() << "\" not found.\n";
+        exit(EXIT_FAILURE);
+    }
 //    } else
 //    {
 //        cout << "wrong count of input files, expected 1.\n";
@@ -190,7 +203,7 @@ void cfg::SetupInputDirectory(const QStringList &positional_arguments)
 }
 
 
-void cfg::SetupOutputDirectory(bool is_set, const QString &value)
+void Configuration::SetupOutputDirectory(bool is_set, const QString &value)
 {
     if (is_set)
     {
@@ -209,7 +222,7 @@ void cfg::SetupOutputDirectory(bool is_set, const QString &value)
     printf("output   directory : %s\n", outputDirectory.path().toStdString().c_str());
 }
 
-void cfg::SetupResourceDirectory(bool is_set, const QString &value)
+void Configuration::SetupResourceDirectory(bool is_set, const QString &value)
 {
     if (is_set)
     {
@@ -228,7 +241,7 @@ void cfg::SetupResourceDirectory(bool is_set, const QString &value)
     cout << "resource directory : " << resourceDirectory.path().toStdString() << "\n\n";
 }
 
-void ::cfg::SetupExcludeDirectory(bool is_set, const QString &value)
+void ::Configuration::SetupExcludeDirectory(bool is_set, const QString &value)
 {
     if (!is_set) return;
 
@@ -239,7 +252,7 @@ void ::cfg::SetupExcludeDirectory(bool is_set, const QString &value)
     {
         QString file_path(exclude_files_in_string.at(i));
         QFileInfo file_info(file_path);
-        if(file_info.isRelative())
+        if (file_info.isRelative())
         {
             file_info.setFile(inputDirectory.filePath(file_path));
         }
@@ -251,72 +264,72 @@ void ::cfg::SetupExcludeDirectory(bool is_set, const QString &value)
     cout << "\n";
 }
 
-bool ::cfg::IsExclude(const QFileInfo &file)
+bool ::Configuration::IsExclude(const QFileInfo &file)
 {
     auto find_index = std::find(excludeFiles.cbegin(), excludeFiles.cend(), file);
     return find_index != excludeFiles.cend();
 }
 
-void cfg::SetupPixelFormat(QString pixel_format_string)
+void Configuration::SetupPixelFormat(QString pixel_format_string)
 {
-    if(pixel_format_string == "Mono")
+    if (pixel_format_string == "Mono")
         pixelFormat = QImage::Format::Format_Mono;
-    else if(pixel_format_string == "MonoLSB")
+    else if (pixel_format_string == "MonoLSB")
         pixelFormat = QImage::Format::Format_MonoLSB;
-    else if(pixel_format_string == "Indexed8")
+    else if (pixel_format_string == "Indexed8")
         pixelFormat = QImage::Format::Format_Indexed8;
-    else if(pixel_format_string == "RGB32")
+    else if (pixel_format_string == "RGB32")
         pixelFormat = QImage::Format::Format_RGB32;
-    else if(pixel_format_string == "ARGB32")
+    else if (pixel_format_string == "ARGB32")
         pixelFormat = QImage::Format::Format_ARGB32;
-    else if(pixel_format_string == "ARGB32_Premultiplied")
+    else if (pixel_format_string == "ARGB32_Premultiplied")
         pixelFormat = QImage::Format::Format_ARGB32_Premultiplied;
-    else if(pixel_format_string == "RGB16")
+    else if (pixel_format_string == "RGB16")
         pixelFormat = QImage::Format::Format_RGB16;
-    else if(pixel_format_string == "ARGB8565_Premultiplied")
+    else if (pixel_format_string == "ARGB8565_Premultiplied")
         pixelFormat = QImage::Format::Format_ARGB8565_Premultiplied;
-    else if(pixel_format_string == "RGB666")
+    else if (pixel_format_string == "RGB666")
         pixelFormat = QImage::Format::Format_RGB666;
-    else if(pixel_format_string == "ARGB6666_Premultiplied")
+    else if (pixel_format_string == "ARGB6666_Premultiplied")
         pixelFormat = QImage::Format::Format_ARGB6666_Premultiplied;
-    else if(pixel_format_string == "RGB555")
+    else if (pixel_format_string == "RGB555")
         pixelFormat = QImage::Format::Format_RGB555;
-    else if(pixel_format_string == "ARGB8555_Premultiplied")
+    else if (pixel_format_string == "ARGB8555_Premultiplied")
         pixelFormat = QImage::Format::Format_ARGB8555_Premultiplied;
-    else if(pixel_format_string == "RGB888")
+    else if (pixel_format_string == "RGB888")
         pixelFormat = QImage::Format::Format_RGB888;
-    else if(pixel_format_string == "RGB444")
+    else if (pixel_format_string == "RGB444")
         pixelFormat = QImage::Format::Format_RGB444;
-    else if(pixel_format_string == "ARGB4444_Premultiplied")
+    else if (pixel_format_string == "ARGB4444_Premultiplied")
         pixelFormat = QImage::Format::Format_ARGB4444_Premultiplied;
-    else if(pixel_format_string == "RGBX8888")
+    else if (pixel_format_string == "RGBX8888")
         pixelFormat = QImage::Format::Format_RGBX8888;
-    else if(pixel_format_string == "RGBA8888")
+    else if (pixel_format_string == "RGBA8888")
         pixelFormat = QImage::Format::Format_RGBA8888;
-    else if(pixel_format_string == "RGBA8888_Premultiplied")
+    else if (pixel_format_string == "RGBA8888_Premultiplied")
         pixelFormat = QImage::Format::Format_RGBA8888_Premultiplied;
-    else if(pixel_format_string == "BGR30")
+    else if (pixel_format_string == "BGR30")
         pixelFormat = QImage::Format::Format_BGR30;
-    else if(pixel_format_string == "A2BGR30_Premultiplied")
+    else if (pixel_format_string == "A2BGR30_Premultiplied")
         pixelFormat = QImage::Format::Format_A2BGR30_Premultiplied;
-    else if(pixel_format_string == "RGB30")
+    else if (pixel_format_string == "RGB30")
         pixelFormat = QImage::Format::Format_RGB30;
-    else if(pixel_format_string == "A2RGB30_Premultiplied")
+    else if (pixel_format_string == "A2RGB30_Premultiplied")
         pixelFormat = QImage::Format::Format_A2RGB30_Premultiplied;
-    else if(pixel_format_string == "Alpha8")
+    else if (pixel_format_string == "Alpha8")
         pixelFormat = QImage::Format::Format_Alpha8;
-    else if(pixel_format_string == "Grayscale8")
+    else if (pixel_format_string == "Grayscale8")
         pixelFormat = QImage::Format::Format_Grayscale8;
     else
         std::cerr << "NO FORMAT " << pixel_format_string.toStdString() << '\n';
 }
 
-void cfg::ReadFromConfigFile(const QString file_path)
+void Configuration::ReadFromConfigFile(const QString file_path)
 {
 
 }
 
-QString cfg::getDefaultConfigContent()
+QString Configuration::getDefaultConfigContent()
 {
     QJsonDocument document;
     QJsonObject rootObject;
@@ -346,10 +359,10 @@ QString cfg::getDefaultConfigContent()
     return document.toJson();
 }
 
-void cfg::ProcessInitDirective(bool is_init)
+void Configuration::ProcessInitDirective(bool is_init)
 {
     QFile out_file("atlasConfig");
-    if(!out_file.open(QFile::WriteOnly | QFile::Text))
+    if (!out_file.open(QFile::WriteOnly | QFile::Text))
     {
         cerr << "Can not open file 'atlasConfig' for writing." << std::endl;
         exit(EXIT_FAILURE);

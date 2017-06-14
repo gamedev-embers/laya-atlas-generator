@@ -11,30 +11,36 @@
 
 class QCoreApplication;
 
-class cfg
+class Configuration
 {
 public:
-    static QDir input;
-    static QDir inputDirectory;
-    static QDir outputDirectory;
-    static QDir resourceDirectory;
+    // static member declarations
+    // --------------------------
+    // directories
+    static QDir input,
+                inputDirectory,
+                outputDirectory,
+                resourceDirectory;
 
-    static int maxSize, spriteSize;
-    static int shapePadding;
+    // sprite properties
+    static bool cropAlpha,
+                rotate;
+    static int spriteSize,
+               shapePadding,
+               extrude;
 
+    // texture properties
+    static QImage::Format pixelFormat;
+    static QString        textureFormat;
+    static int textureQuality,
+               maxSize;
+    static bool POT;
+
+    // other properties
+    static bool force;
     static QVector<QFileInfo> excludeFiles;
 
-    static int extrude;
-    static bool cropAlpha;
-    static bool force;
-    static bool POT;
-    static bool rotate;
-
-    // for image control
-    static QImage::Format pixelFormat;
-    static int textureQuality;
-    static QString textureFormat;
-
+    // static function declarations
     static void ParseCommandLine(const QCoreApplication &application);
     static bool IsExclude(const QFileInfo &file);
     static void ReadFromConfigFile(const QString file_path);
@@ -42,12 +48,16 @@ public:
 private:
     static QString getDefaultConfigContent();
 
-    static void SetupInputDirectory   (const QStringList &positional_arguments);
-    static void SetupOutputDirectory  (bool is_set, const QString &value);
+    static void SetupInputDirectory(const QStringList &positional_arguments);
+
+    static void SetupOutputDirectory(bool is_set, const QString &value);
+
     static void SetupResourceDirectory(bool is_set, const QString &value);
-    static void SetupExcludeDirectory (bool is_set, const QString &value);
+
+    static void SetupExcludeDirectory(bool is_set, const QString &value);
 
     static void SetupPixelFormat(QString pixel_format_string);
+
     static void ProcessInitDirective(bool is_init);
 };
 

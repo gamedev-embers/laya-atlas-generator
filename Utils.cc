@@ -36,17 +36,17 @@ void file_utils::Copy(const QString &from, const QString &to)
 
 void ::file_utils::CopyToResourceDirectory(const QString &path)
 {
-    QString relative_path = cfg::inputDirectory.relativeFilePath(path);
+    QString relative_path = Configuration::inputDirectory.relativeFilePath(path);
 
-    cfg::resourceDirectory.mkpath(QFileInfo(relative_path).dir().path());
+    Configuration::resourceDirectory.mkpath(QFileInfo(relative_path).dir().path());
 
-    QString to_path = cfg::resourceDirectory.filePath(relative_path);
+    QString to_path = Configuration::resourceDirectory.filePath(relative_path);
     Copy(path, to_path);
 }
 
 QString file_utils::GetRelativeToInputDirectoryPath(QString path)
 {
-    return cfg::inputDirectory.relativeFilePath(path);
+    return Configuration::inputDirectory.relativeFilePath(path);
 }
 
 int ::math_utils::CeilPOT(int value)

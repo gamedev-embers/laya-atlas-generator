@@ -1,10 +1,11 @@
 {
     "atlas": {
         "POT": false,
-        "pixelFormat": "RGBA32",
+        "pixelFormat": "ARGB32",
         "quality": -1,
         "size": 2048,
-        "spritePadding": 1
+        "spritePadding": 1,
+        "textureFormat": "PNG"
     },
     "excludeList": [
     ],

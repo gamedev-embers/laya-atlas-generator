@@ -9,8 +9,8 @@
 
 #include "AtlasPacker.h"
 #include "Utils.h"
-#include "Configuration.h"
 #include "JsonExport.h"
+#include "Configuration.h"
 
 using FreeRectChoiceHeuristic = rbp::MaxRectsBinPack::FreeRectChoiceHeuristic;
 using rbp::MaxRectsBinPack;
@@ -123,8 +123,8 @@ QImage *AtlasPacker::ImageCropAlpha(const QImage *input, Rect &newBounds)
 
 QImage *AtlasPacker::ImageExtrude(QImage *input, ImageInfo &image_info)
 {
-    int new_width = input->width() + cfg::extrude * 2,
-            new_height = input->height() + cfg::extrude * 2;
+    int new_width = input->width() + Configuration::extrude * 2,
+            new_height = input->height() + Configuration::extrude * 2;
 
     QImage *output = new QImage(new_width, new_height, QImage::Format_ARGB32);
     output->fill(0);
@@ -132,22 +132,22 @@ QImage *AtlasPacker::ImageExtrude(QImage *input, ImageInfo &image_info)
     // copy image
     for (int row = 0; row < input->height(); ++row)
     {
-        memcpy(output->scanLine(row + cfg::extrude) + cfg::extrude * 4, input->scanLine(row), input->bytesPerLine());
+        memcpy(output->scanLine(row + Configuration::extrude) + Configuration::extrude * 4, input->scanLine(row), input->bytesPerLine());
     }
     // ImageExtrude
-    for (int i = 0; i < cfg::extrude; ++i)
+    for (int i = 0; i < Configuration::extrude; ++i)
     {
         // ImageExtrude top
         if (image_info.sprite_source_size.y == 0)
             memcpy(
-                    output->scanLine(i) + cfg::extrude * 4,
+                    output->scanLine(i) + Configuration::extrude * 4,
                     input->scanLine(0),
                     input->bytesPerLine());
 
         // ImageExtrude bottom
         if (image_info.sprite_source_size.y + image_info.sprite_source_size.height == image_info.source_size.height)
             memcpy(
-                    output->scanLine(input->height() + cfg::extrude + i) + cfg::extrude * 4,
+                    output->scanLine(input->height() + Configuration::extrude + i) + Configuration::extrude * 4,
                     input->scanLine(input->height() - 1),
                     input->bytesPerLine());
 
@@ -156,13 +156,13 @@ QImage *AtlasPacker::ImageExtrude(QImage *input, ImageInfo &image_info)
             // ImageExtrude left
             if (image_info.sprite_source_size.x == 0)
                 memcpy(
-                        output->scanLine(row + cfg::extrude) + i * 4,
+                        output->scanLine(row + Configuration::extrude) + i * 4,
                         input->scanLine(row),
                         4);
             // ImageExtrude right
             if (image_info.sprite_source_size.x + image_info.sprite_source_size.width == image_info.source_size.width)
                 memcpy(
-                        output->scanLine(row + cfg::extrude) + (i + cfg::extrude + input->width()) * 4,
+                        output->scanLine(row + Configuration::extrude) + (i + Configuration::extrude + input->width()) * 4,
                         input->scanLine(row) + (input->width() - 1) * 4,
                         4);
         }
@@ -195,15 +195,15 @@ void AtlasPacker::ExportAtlas(QString relative_path)
         return;
 
     // create directories
-    QDir out_dir(cfg::outputDirectory.filePath(relative_path));
+    QDir out_dir(Configuration::outputDirectory.filePath(relative_path));
     out_dir.mkpath("..");
 
     QString images;
 
     for (int i = 0; i < canvases.size(); ++i)
     {
-        QString file_name = relative_path + (i > 0 ? std::to_string(i).c_str() : "") + "." + cfg::textureFormat;
-        QString file_path = cfg::outputDirectory.filePath(file_name);
+        QString file_name = relative_path + (i > 0 ? std::to_string(i).c_str() : "") + "." + Configuration::textureFormat;
+        QString file_path = Configuration::outputDirectory.filePath(file_name);
 
         if(i > 0)
             images += ',';
@@ -211,12 +211,12 @@ void AtlasPacker::ExportAtlas(QString relative_path)
 
         bool need_free = false;
         QImage* canvas = canvases[i];
-        if(cfg::pixelFormat != canvas->format())
+        if(Configuration::pixelFormat != canvas->format())
         {
             need_free = true;
-            canvas = new QImage(canvas->convertToFormat(cfg::pixelFormat));
+            canvas = new QImage(canvas->convertToFormat(Configuration::pixelFormat));
         }
-        canvas->save(file_path, cfg::textureFormat.toStdString().c_str(), cfg::textureQuality);
+        canvas->save(file_path, Configuration::textureFormat.toStdString().c_str(), Configuration::textureQuality);
         if(need_free)
             delete canvas;
         cout << "SAVE " << file_path.toStdString() << "\n";
@@ -224,7 +224,7 @@ void AtlasPacker::ExportAtlas(QString relative_path)
 
 
 
-    QString data_export_file = cfg::outputDirectory.filePath(relative_path + ".atlas");
+    QString data_export_file = Configuration::outputDirectory.filePath(relative_path + ".atlas");
     data_export->SetMetaImages(images);
     data_export->Export(data_export_file);
     cout << "SAVE " << data_export_file.toStdString() << "\n\n";
@@ -283,7 +283,7 @@ void AtlasPacker::PackBin()
         image_info.source_size.height = image->height();
 
         // crop alpha if needed.
-        if (cfg::cropAlpha)
+        if (Configuration::cropAlpha)
         {
             image = ImageCropAlpha(image, image_info.sprite_source_size);
 
@@ -306,9 +306,9 @@ void AtlasPacker::PackBin()
         }
 
         // extrude if needed.
-        if (cfg::extrude)
+        if (Configuration::extrude)
         {
-            image = ImageExtrude(image, image_info.trimmed, image_info);
+            image = ImageExtrude(image, image_info);
             delete image_info.image;
             image_info.image = image;
         }
@@ -424,7 +424,7 @@ void AtlasPacker::StorageInsertResult(QVector<HeuristicResult> &heuristicResult,
         if (can_accommodate)
             break;
 
-        if (cfg::POT)
+        if (Configuration::POT)
         {
             if (bin_height >= bin_width)
                 bin_width *= 2;
@@ -436,7 +436,7 @@ void AtlasPacker::StorageInsertResult(QVector<HeuristicResult> &heuristicResult,
             float h_ceil_pot = (float) math_utils::CeilPOT(bin_height);
             // make w_ceil_pot not equal to h_ceil_pot
             if(w_ceil_pot == h_ceil_pot)
-                w_ceil_pot = std::min((float)cfg::maxSize, w_ceil_pot * 2);
+                w_ceil_pot = std::min((float)Configuration::maxSize, w_ceil_pot * 2);
 
             float expect_ratio = w_ceil_pot / h_ceil_pot;
             float now_ratio    = (float) bin_width / (float)bin_height;
@@ -447,16 +447,16 @@ void AtlasPacker::StorageInsertResult(QVector<HeuristicResult> &heuristicResult,
         }
 
         // limit bin'size lower than max size.
-        if (bin_width >= cfg::maxSize && bin_height >= cfg::maxSize)
+        if (bin_width >= Configuration::maxSize && bin_height >= Configuration::maxSize)
         {
-            heuristic_result.bin_size.width  = cfg::maxSize;
-            heuristic_result.bin_size.height = cfg::maxSize;
+            heuristic_result.bin_size.width  = Configuration::maxSize;
+            heuristic_result.bin_size.height = Configuration::maxSize;
             break;
         }
-        if(bin_width > cfg::maxSize)
-            bin_width = cfg::maxSize;
-        if(bin_height > cfg::maxSize)
-            bin_height = cfg::maxSize;
+        if(bin_width > Configuration::maxSize)
+            bin_width = Configuration::maxSize;
+        if(bin_height > Configuration::maxSize)
+            bin_height = Configuration::maxSize;
     }
 
     heuristicResult.push_back(heuristic_result);
@@ -464,14 +464,14 @@ void AtlasPacker::StorageInsertResult(QVector<HeuristicResult> &heuristicResult,
 
 bool AtlasPacker::Insert(int bin_width, int bin_height, HeuristicResult &result, rbp::MaxRectsBinPack::FreeRectChoiceHeuristic method)
 {
-    bin_pack.Init(bin_width + cfg::shapePadding, bin_height + cfg::shapePadding);
+    bin_pack.Init(bin_width + Configuration::shapePadding, bin_height + Configuration::shapePadding);
 
     for(ImageInfo& image_info : images)
     {
         // rect to insert must plus shape padding.
         Rect rect = bin_pack.Insert(
-                image_info.image->width()  + cfg::shapePadding,
-                image_info.image->height() + cfg::shapePadding,
+                image_info.image->width()  + Configuration::shapePadding,
+                image_info.image->height() + Configuration::shapePadding,
                 method);
 
         if(rect.width == 0)
@@ -480,8 +480,8 @@ bool AtlasPacker::Insert(int bin_width, int bin_height, HeuristicResult &result,
         }
 
         // after we retrieve bounds in bin, we subtract bounds'size from shape padding.
-        rect.width  -= cfg::shapePadding;
-        rect.height -= cfg::shapePadding;
+        rect.width  -= Configuration::shapePadding;
+        rect.height -= Configuration::shapePadding;
 
         result.opacity_size.width  = std::max(result.opacity_size.width,  rect.x + rect.width);
         result.opacity_size.height = std::max(result.opacity_size.height, rect.y + rect.height);
