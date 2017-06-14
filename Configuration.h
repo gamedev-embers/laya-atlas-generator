@@ -8,6 +8,7 @@
 #include <QString>
 #include <QDir>
 #include <QtGui/QImage>
+#include <QCommandLineParser>
 
 class QCoreApplication;
 
@@ -17,16 +18,16 @@ public:
     // static member declarations
     // --------------------------
     // directories
-    static QDir input,
-                inputDirectory,
+    static QFileInfo input;
+    static QDir inputDirectory,
                 outputDirectory,
                 resourceDirectory;
 
     // sprite properties
     static bool cropAlpha,
-                rotate;
+                rotation;
     static int spriteSize,
-               shapePadding,
+               spritePadding,
                extrude;
 
     // texture properties
@@ -43,22 +44,15 @@ public:
     // static function declarations
     static void ParseCommandLine(const QCoreApplication &application);
     static bool IsExclude(const QFileInfo &file);
-    static void ReadFromConfigFile(const QString file_path);
 
 private:
+    static void ReadConfigurationFile(QString configFilePath);
     static QString getDefaultConfigContent();
-
-    static void SetupInputDirectory(const QStringList &positional_arguments);
-
-    static void SetupOutputDirectory(bool is_set, const QString &value);
-
-    static void SetupResourceDirectory(bool is_set, const QString &value);
-
-    static void SetupExcludeDirectory(bool is_set, const QString &value);
-
-    static void SetupPixelFormat(QString pixel_format_string);
-
-    static void ProcessInitDirective(bool is_init);
+    static void SetupOutputDirectory    (const QString &value);
+    static void SetupResourceDirectory  (const QString &value);
+    static void SetupExcludeDirectory   (const QString &value);
+    static void SetupPixelFormat        (QString pixel_format_string);
+    static void ProcessInitDirective  (bool is_init);
 };
 
 #endif //ATLASGENERATOR_CLI_ARGS_H

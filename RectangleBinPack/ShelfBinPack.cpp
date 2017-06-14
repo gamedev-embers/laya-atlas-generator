@@ -1,5 +1,5 @@
 /** @file ShelfBinPack.cpp
-	@author Jukka Jylänki
+	@author Jukka Jylï¿½nki
 
 	@brief Implements different bin packer algorithms that use the SHELF data structure.
 
@@ -163,7 +163,7 @@ Rect ShelfBinPack::Insert(int width, int height, ShelfChoiceHeuristic method)
 			unsigned long bestShelfSurfaceArea = (unsigned long)-1;
 			for(size_t i = 0; i < shelves.size(); ++i)
 			{
-				// Pre-rotate the rect onto the shelf here already so that the area fit computation
+				// Pre-rotation the rect onto the shelf here already so that the area fit computation
 				// is done correctly.
 				RotateToShelf(shelves[i], width, height);
 				if (FitsOnShelf(shelves[i], width, height, i == shelves.size()-1))
@@ -192,7 +192,7 @@ Rect ShelfBinPack::Insert(int width, int height, ShelfChoiceHeuristic method)
 			int bestShelfSurfaceArea = -1;
 			for(size_t i = 0; i < shelves.size(); ++i)
 			{
-				// Pre-rotate the rect onto the shelf here already so that the area fit computation
+				// Pre-rotation the rect onto the shelf here already so that the area fit computation
 				// is done correctly.
 				RotateToShelf(shelves[i], width, height);
 				if (FitsOnShelf(shelves[i], width, height, i == shelves.size()-1))
@@ -221,7 +221,7 @@ Rect ShelfBinPack::Insert(int width, int height, ShelfChoiceHeuristic method)
 			int bestShelfHeightDifference = 0x7FFFFFFF;
 			for(size_t i = 0; i < shelves.size(); ++i)
 			{
-				// Pre-rotate the rect onto the shelf here already so that the height fit computation
+				// Pre-rotation the rect onto the shelf here already so that the height fit computation
 				// is done correctly.
 				RotateToShelf(shelves[i], width, height);
 				if (FitsOnShelf(shelves[i], width, height, i == shelves.size()-1))
@@ -252,7 +252,7 @@ Rect ShelfBinPack::Insert(int width, int height, ShelfChoiceHeuristic method)
 			int bestShelfWidthDifference = 0x7FFFFFFF;
 			for(size_t i = 0; i < shelves.size(); ++i)
 			{
-				// Pre-rotate the rect onto the shelf here already so that the height fit computation
+				// Pre-rotation the rect onto the shelf here already so that the height fit computation
 				// is done correctly.
 				RotateToShelf(shelves[i], width, height);
 				if (FitsOnShelf(shelves[i], width, height, i == shelves.size()-1))
@@ -283,7 +283,7 @@ Rect ShelfBinPack::Insert(int width, int height, ShelfChoiceHeuristic method)
 			int bestShelfWidthDifference = -1;
 			for(size_t i = 0; i < shelves.size(); ++i)
 			{
-				// Pre-rotate the rect onto the shelf here already so that the height fit computation
+				// Pre-rotation the rect onto the shelf here already so that the height fit computation
 				// is done correctly.
 				RotateToShelf(shelves[i], width, height);
 				if (FitsOnShelf(shelves[i], width, height, i == shelves.size()-1))

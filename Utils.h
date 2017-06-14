@@ -16,4 +16,5 @@ namespace math_utils
 {
     int CeilPOT(int value);
 }
+
 #endif //ATLASGENERATOR_UTILS_H

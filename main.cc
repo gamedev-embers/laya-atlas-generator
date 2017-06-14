@@ -133,16 +133,19 @@ void ProcessFile(const QFileInfo &file_info, AtlasPacker &atlas_packer, vector<Q
 void ProcessRegularFile(QString filename, AtlasPacker &atlas_packer)
 {
     // 检查文件是否被用户排除
-    bool is_exclude = Configuration::IsExclude(QFileInfo(filename));
-    if (is_exclude)
+    if (Configuration::IsExclude(QFileInfo(filename)))
+    {
+        file_utils::CopyToResourceDirectory(filename);
         cout << "EXCLUDE " << filename.toStdString() << "\n";
+        return;
+    }
 
     bool is_image = atlas_packer.AddImage(filename);
     if (!is_image)
-        cout << "NOT IMAGE " << filename.toStdString() << "\n";
-
-    if(is_exclude || !is_image)
+    {
         file_utils::CopyToResourceDirectory(filename);
+        cout << "NOT IMAGE " << filename.toStdString() << "\n";
+    }
 }
 
 int main(int argc, char **argv)
@@ -152,6 +155,6 @@ int main(int argc, char **argv)
     Configuration::ParseCommandLine(a);
     CheckResourceModification();
 
-    PackDirectory(Configuration::input);
+    PackDirectory(Configuration::inputDirectory);
     return EXIT_SUCCESS;
 }

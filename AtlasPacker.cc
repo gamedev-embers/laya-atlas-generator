@@ -202,7 +202,7 @@ void AtlasPacker::ExportAtlas(QString relative_path)
 
     for (int i = 0; i < canvases.size(); ++i)
     {
-        QString file_name = relative_path + (i > 0 ? std::to_string(i).c_str() : "") + "." + Configuration::textureFormat;
+        QString file_name = relative_path + (i > 0 ? std::to_string(i).c_str() : "") + "." + Configuration::textureFormat.toLower();
         QString file_path = Configuration::outputDirectory.filePath(file_name);
 
         if(i > 0)
@@ -221,8 +221,6 @@ void AtlasPacker::ExportAtlas(QString relative_path)
             delete canvas;
         cout << "SAVE " << file_path.toStdString() << "\n";
     }
-
-
 
     QString data_export_file = Configuration::outputDirectory.filePath(relative_path + ".atlas");
     data_export->SetMetaImages(images);
@@ -464,14 +462,14 @@ void AtlasPacker::StorageInsertResult(QVector<HeuristicResult> &heuristicResult,
 
 bool AtlasPacker::Insert(int bin_width, int bin_height, HeuristicResult &result, rbp::MaxRectsBinPack::FreeRectChoiceHeuristic method)
 {
-    bin_pack.Init(bin_width + Configuration::shapePadding, bin_height + Configuration::shapePadding);
+    bin_pack.Init(bin_width + Configuration::spritePadding, bin_height + Configuration::spritePadding);
 
     for(ImageInfo& image_info : images)
     {
         // rect to insert must plus shape padding.
         Rect rect = bin_pack.Insert(
-                image_info.image->width()  + Configuration::shapePadding,
-                image_info.image->height() + Configuration::shapePadding,
+                image_info.image->width()  + Configuration::spritePadding,
+                image_info.image->height() + Configuration::spritePadding,
                 method);
 
         if(rect.width == 0)
@@ -480,8 +478,8 @@ bool AtlasPacker::Insert(int bin_width, int bin_height, HeuristicResult &result,
         }
 
         // after we retrieve bounds in bin, we subtract bounds'size from shape padding.
-        rect.width  -= Configuration::shapePadding;
-        rect.height -= Configuration::shapePadding;
+        rect.width  -= Configuration::spritePadding;
+        rect.height -= Configuration::spritePadding;
 
         result.opacity_size.width  = std::max(result.opacity_size.width,  rect.x + rect.width);
         result.opacity_size.height = std::max(result.opacity_size.height, rect.y + rect.height);
