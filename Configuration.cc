@@ -22,62 +22,63 @@ using std::cout;
 using std::cerr;
 
 // static member definitions
-QDir Args::input;
-QDir Args::input_directory;
-QDir Args::output_directory;
-QDir Args::resource_directory;
-int Args::max_size, Args::tile_size;
-int Args::shape_padding;
-QImage::Format Args::pixel_format;
-int Args::texture_quality;
-QVector<QFileInfo> Args::exclude_files;
-int  Args::extrude;
-bool Args::crop_alpha;
-bool Args::force;
-bool Args::power_of_two;
-bool Args::rotate;
+QDir cfg::input;
+QDir cfg::inputDirectory;
+QDir cfg::outputDirectory;
+QDir cfg::resourceDirectory;
+int cfg::maxSize, cfg::spriteSize;
+int cfg::shapePadding;
+QImage::Format cfg::pixelFormat;
+int cfg::textureQuality;
+QVector<QFileInfo> cfg::excludeFiles;
+int  cfg::extrude;
+bool cfg::cropAlpha;
+bool cfg::force;
+bool cfg::POT;
+bool cfg::rotate;
 
-void Args::ParseCommandLine(const QCoreApplication &application)
+void cfg::ParseCommandLine(const QCoreApplication &application)
 {
-    QCommandLineOption output_option(
+    // command line options
+    QCommandLineOption outputOption(
             QStringList() << "o" << "output",
             "The directory for exporting atlas.",
             "output directory"
     );
-    QCommandLineOption resource_option(
+    QCommandLineOption resourceOption(
             QStringList() << "r" << "resource",
             "Thr directory of files cannot be packed.",
             "resource directory"
     );
-    QCommandLineOption max_size_option(
+    QCommandLineOption maxSizeOption(
             QStringList() << "S" << "maxSize",
             "Max size of atlas.",
             "max atlas size",
             "2048"
     );
-    QCommandLineOption tile_size_option(
-            QStringList() << "s" << "tileSize",
-            "Max size of tile.",
-            "max tile size",
+    QCommandLineOption spriteSizeOption(
+            QStringList() << "s" << "spriteSize",
+            "Max size of sprite.",
+            "max sprite size",
             "512"
     );
-    QCommandLineOption extrude_option(
+    QCommandLineOption extrudeOption(
             QStringList() << "e" << "extrude",
             "Repeat the sprite's pixels at the borders.",
-            "vvvvname",
+            "extrude",
             "1"
     );
-    QCommandLineOption include_images_option(
+    QCommandLineOption includeImagesOption(
             QStringList() << "includeImages",
             "The picture in include list have to packed anyway, split by ','"
     );
-    QCommandLineOption exclude_images_option(
+    QCommandLineOption excludeImagesOption(
             QStringList() << "x" << "exclude",
             "The picture in exclude list will not packed, split by ','.",
             "exclude directory"
     );
-    QCommandLineOption tile_padding_option(
-            QStringList() << "p" << "tilePadding",
+    QCommandLineOption spritePaddingOption(
+            QStringList() << "p" << "spritePadding",
             "Tile padding is the space between sprites. Value adds transparent pixels between sprites to avoid artifacts from neighbor sprites. The transparent pixels are not added to the sprites. Default is 2.",
             "padding",
             "1"
@@ -85,89 +86,93 @@ void Args::ParseCommandLine(const QCoreApplication &application)
     QCommandLineOption force_option(
             QStringList() << "f" << "force",
             "If true, then publish even if picture never be modified.");
-    QCommandLineOption power_of_2_option(
+    QCommandLineOption POTOption(
             QStringList() << "2" << "powerOfTwo",
             "If the atlas should be in units of power of 2 or irregular."
     );
-    QCommandLineOption crop_alpha_option(
+    QCommandLineOption cropAlphaOption(
             QStringList() << "c" << "cropAlpha",
             "If source sprites should be cropped to their transparency bounds to pack them even tighter."
     );
-    QCommandLineOption rotate_option(
+    QCommandLineOption rotateOption(
             QStringList() << "r" << "rotate",
             "Allow sprite rotation to fit area better."
     );
-    QCommandLineOption pixel_format_option(
+    QCommandLineOption pixelFormatOption(
             QStringList() << "m" << "format",
             "Choose the output texture pixel format. Mono | MonoLSB | Indexed8 | RGB32 | ARGB32 | ARGB32_Premultiplied | RGB16 | ARGB8565_Premultiplied | RGB666 | ARGB6666_Premultiplied | RGB555 | ARGB8555_Premultiplied | RGB888 | RGB444 | ARGB4444_Premultiplied | RGBX8888 | RGBA8888 | RGBA8888_Premultiplied | BGR30 | A2BGR30_Premultiplied | RGB30 | A2RGB30_Premultiplied | Alpha8 | Grayscale8",
             "pixel format", "ARGB32"
     );
-    QCommandLineOption texture_quality_option(
+    QCommandLineOption textureQualityOption(
             QStringList() << "q" << "textureQuality",
             "",
             "texture quality", "-1"
     );
-    QCommandLineOption init_option(
+    QCommandLineOption textureFormatOption(
+            QStringList() << "textureFormat",
+            "place holder",
+            "texture format", "PNG"
+    );
+    QCommandLineOption initOption(
             QStringList() << "init",
             "Generate a configuration file."
     );
 
-    QCommandLineParser command_line_parser;
+    // parse options
+    QCommandLineParser commandLineParser;
 
-    command_line_parser.addOption(output_option);
-    command_line_parser.addOption(resource_option);
+    commandLineParser.addOption(outputOption);
+    commandLineParser.addOption(resourceOption);
+    commandLineParser.addOption(maxSizeOption);
+    commandLineParser.addOption(spriteSizeOption);
+    commandLineParser.addOption(extrudeOption);
+    commandLineParser.addOption(includeImagesOption);
+    commandLineParser.addOption(excludeImagesOption);
+    commandLineParser.addOption(spritePaddingOption);
+    commandLineParser.addOption(force_option);
+    commandLineParser.addOption(POTOption);
+    commandLineParser.addOption(cropAlphaOption);
+    commandLineParser.addOption(rotateOption);
+    commandLineParser.addOption(pixelFormatOption);
+    commandLineParser.addOption(textureQualityOption);
+    commandLineParser.addOption(initOption);
 
-    command_line_parser.addOption(max_size_option);
-    command_line_parser.addOption(tile_size_option);
-
-    command_line_parser.addOption(extrude_option);
-
-    command_line_parser.addOption(include_images_option);
-    command_line_parser.addOption(exclude_images_option);
-
-    command_line_parser.addOption(tile_padding_option);
-    command_line_parser.addOption(force_option);
-    command_line_parser.addOption(power_of_2_option);
-    command_line_parser.addOption(crop_alpha_option);
-    command_line_parser.addOption(rotate_option);
-    command_line_parser.addOption(pixel_format_option);
-    command_line_parser.addOption(texture_quality_option);
-    command_line_parser.addOption(init_option);
-
-    command_line_parser.addHelpOption();
-    command_line_parser.addVersionOption();
-    command_line_parser.addPositionalArgument("input",
+    commandLineParser.addHelpOption();
+    commandLineParser.addVersionOption();
+    commandLineParser.addPositionalArgument("input",
                                               QCoreApplication::translate("main", "input directory or config file."));
 
-    command_line_parser.process(application);
+    commandLineParser.process(application);
 
-    ProcessInitDirective(command_line_parser.isSet(init_option));
+    // process user input
+    ProcessInitDirective(commandLineParser.isSet(initOption));
 
-    SetupInputDirectory   (command_line_parser.positionalArguments());
-    SetupOutputDirectory  (command_line_parser.isSet(output_option),   command_line_parser.value(output_option));
-    SetupResourceDirectory(command_line_parser.isSet(resource_option), command_line_parser.value(resource_option));
-    SetupExcludeDirectory (command_line_parser.isSet(exclude_images_option),  command_line_parser.value(exclude_images_option));
-    SetupPixelFormat      (command_line_parser.value(pixel_format_option));
+    SetupInputDirectory   (commandLineParser.positionalArguments());
+    SetupOutputDirectory  (commandLineParser.isSet(outputOption)         , commandLineParser.value(outputOption));
+    SetupResourceDirectory(commandLineParser.isSet(resourceOption)       , commandLineParser.value(resourceOption));
+    SetupExcludeDirectory (commandLineParser.isSet(excludeImagesOption)  , commandLineParser.value(excludeImagesOption));
+    SetupPixelFormat      (commandLineParser.value(pixelFormatOption));
 
-    extrude = command_line_parser.value(extrude_option).toInt();
-    max_size = command_line_parser.value(max_size_option).toInt();
-    tile_size = command_line_parser.value(tile_size_option).toInt();
-    shape_padding = std::stoi(command_line_parser.value(tile_padding_option).toStdString());
-    power_of_two = command_line_parser.isSet(power_of_2_option);
-    crop_alpha = command_line_parser.isSet(crop_alpha_option);
-    rotate = command_line_parser.isSet(rotate_option);
-    force = command_line_parser.isSet(force_option);
-    texture_quality = command_line_parser.value(texture_quality_option).toInt();
+    extrude        = commandLineParser.value(extrudeOption)        . toInt();
+    maxSize        = commandLineParser.value(maxSizeOption)        . toInt();
+    spriteSize     = commandLineParser.value(spriteSizeOption)     . toInt();
+    shapePadding   = commandLineParser.value(spritePaddingOption)  . toInt();
+    textureQuality = commandLineParser.value(textureQualityOption) . toInt();
+    textureFormat  = commandLineParser.value(textureFormatOption);
+    POT            = commandLineParser.isSet(POTOption);
+    cropAlpha      = commandLineParser.isSet(cropAlphaOption);
+    rotate         = commandLineParser.isSet(rotateOption);
+    force          = commandLineParser.isSet(force_option);
 }
 
-void Args::SetupInputDirectory(const QStringList &positional_arguments)
+void cfg::SetupInputDirectory(const QStringList &positional_arguments)
 {
 //    if (positional_arguments.size() == 1)
 //    {
         input = QDir(positional_arguments.at(0));
         bool success = input.makeAbsolute();
         assert(success);
-        input_directory = input;
+        inputDirectory = input;
 
         if (input.exists())
         {
@@ -185,45 +190,45 @@ void Args::SetupInputDirectory(const QStringList &positional_arguments)
 }
 
 
-void Args::SetupOutputDirectory(bool is_set, const QString &value)
+void cfg::SetupOutputDirectory(bool is_set, const QString &value)
 {
     if (is_set)
     {
-        output_directory = QDir(value);
-        bool success = output_directory.makeAbsolute();
+        outputDirectory = QDir(value);
+        bool success = outputDirectory.makeAbsolute();
         assert(success);
     } else
     {
-        output_directory = input_directory;
-        output_directory.cdUp();
+        outputDirectory = inputDirectory;
+        outputDirectory.cdUp();
         QString default_output("default_output");
-        output_directory.mkdir(default_output);
-        output_directory.cd(default_output);
+        outputDirectory.mkdir(default_output);
+        outputDirectory.cd(default_output);
     }
 
-    printf("output   directory : %s\n", output_directory.path().toStdString().c_str());
+    printf("output   directory : %s\n", outputDirectory.path().toStdString().c_str());
 }
 
-void Args::SetupResourceDirectory(bool is_set, const QString &value)
+void cfg::SetupResourceDirectory(bool is_set, const QString &value)
 {
     if (is_set)
     {
-        resource_directory = QDir(value);
-        bool success = resource_directory.makeAbsolute();
+        resourceDirectory = QDir(value);
+        bool success = resourceDirectory.makeAbsolute();
         assert(success);
     } else
     {
-        resource_directory = input_directory;
-        resource_directory.cdUp();
+        resourceDirectory = inputDirectory;
+        resourceDirectory.cdUp();
         QString default_output("default_resource");
-        resource_directory.mkdir(default_output);
-        resource_directory.cd(default_output);
+        resourceDirectory.mkdir(default_output);
+        resourceDirectory.cd(default_output);
     }
 
-    cout << "resource directory : " << resource_directory.path().toStdString() << "\n\n";
+    cout << "resource directory : " << resourceDirectory.path().toStdString() << "\n\n";
 }
 
-void ::Args::SetupExcludeDirectory(bool is_set, const QString &value)
+void ::cfg::SetupExcludeDirectory(bool is_set, const QString &value)
 {
     if (!is_set) return;
 
@@ -236,82 +241,82 @@ void ::Args::SetupExcludeDirectory(bool is_set, const QString &value)
         QFileInfo file_info(file_path);
         if(file_info.isRelative())
         {
-            file_info.setFile(input_directory.filePath(file_path));
+            file_info.setFile(inputDirectory.filePath(file_path));
         }
 
-        exclude_files.push_back(file_info);
+        excludeFiles.push_back(file_info);
 
         cout << "    " << file_info.absoluteFilePath().toStdString() << "\n";
     }
     cout << "\n";
 }
 
-bool ::Args::IsExclude(const QFileInfo &file)
+bool ::cfg::IsExclude(const QFileInfo &file)
 {
-    auto find_index = std::find(exclude_files.cbegin(), exclude_files.cend(), file);
-    return find_index != exclude_files.cend();
+    auto find_index = std::find(excludeFiles.cbegin(), excludeFiles.cend(), file);
+    return find_index != excludeFiles.cend();
 }
 
-void Args::SetupPixelFormat(QString pixel_format_string)
+void cfg::SetupPixelFormat(QString pixel_format_string)
 {
     if(pixel_format_string == "Mono")
-        pixel_format = QImage::Format::Format_Mono;
+        pixelFormat = QImage::Format::Format_Mono;
     else if(pixel_format_string == "MonoLSB")
-        pixel_format = QImage::Format::Format_MonoLSB;
+        pixelFormat = QImage::Format::Format_MonoLSB;
     else if(pixel_format_string == "Indexed8")
-        pixel_format = QImage::Format::Format_Indexed8;
+        pixelFormat = QImage::Format::Format_Indexed8;
     else if(pixel_format_string == "RGB32")
-        pixel_format = QImage::Format::Format_RGB32;
+        pixelFormat = QImage::Format::Format_RGB32;
     else if(pixel_format_string == "ARGB32")
-        pixel_format = QImage::Format::Format_ARGB32;
+        pixelFormat = QImage::Format::Format_ARGB32;
     else if(pixel_format_string == "ARGB32_Premultiplied")
-        pixel_format = QImage::Format::Format_ARGB32_Premultiplied;
+        pixelFormat = QImage::Format::Format_ARGB32_Premultiplied;
     else if(pixel_format_string == "RGB16")
-        pixel_format = QImage::Format::Format_RGB16;
+        pixelFormat = QImage::Format::Format_RGB16;
     else if(pixel_format_string == "ARGB8565_Premultiplied")
-        pixel_format = QImage::Format::Format_ARGB8565_Premultiplied;
+        pixelFormat = QImage::Format::Format_ARGB8565_Premultiplied;
     else if(pixel_format_string == "RGB666")
-        pixel_format = QImage::Format::Format_RGB666;
+        pixelFormat = QImage::Format::Format_RGB666;
     else if(pixel_format_string == "ARGB6666_Premultiplied")
-        pixel_format = QImage::Format::Format_ARGB6666_Premultiplied;
+        pixelFormat = QImage::Format::Format_ARGB6666_Premultiplied;
     else if(pixel_format_string == "RGB555")
-        pixel_format = QImage::Format::Format_RGB555;
+        pixelFormat = QImage::Format::Format_RGB555;
     else if(pixel_format_string == "ARGB8555_Premultiplied")
-        pixel_format = QImage::Format::Format_ARGB8555_Premultiplied;
+        pixelFormat = QImage::Format::Format_ARGB8555_Premultiplied;
     else if(pixel_format_string == "RGB888")
-        pixel_format = QImage::Format::Format_RGB888;
+        pixelFormat = QImage::Format::Format_RGB888;
     else if(pixel_format_string == "RGB444")
-        pixel_format = QImage::Format::Format_RGB444;
+        pixelFormat = QImage::Format::Format_RGB444;
     else if(pixel_format_string == "ARGB4444_Premultiplied")
-        pixel_format = QImage::Format::Format_ARGB4444_Premultiplied;
+        pixelFormat = QImage::Format::Format_ARGB4444_Premultiplied;
     else if(pixel_format_string == "RGBX8888")
-        pixel_format = QImage::Format::Format_RGBX8888;
+        pixelFormat = QImage::Format::Format_RGBX8888;
     else if(pixel_format_string == "RGBA8888")
-        pixel_format = QImage::Format::Format_RGBA8888;
+        pixelFormat = QImage::Format::Format_RGBA8888;
     else if(pixel_format_string == "RGBA8888_Premultiplied")
-        pixel_format = QImage::Format::Format_RGBA8888_Premultiplied;
+        pixelFormat = QImage::Format::Format_RGBA8888_Premultiplied;
     else if(pixel_format_string == "BGR30")
-        pixel_format = QImage::Format::Format_BGR30;
+        pixelFormat = QImage::Format::Format_BGR30;
     else if(pixel_format_string == "A2BGR30_Premultiplied")
-        pixel_format = QImage::Format::Format_A2BGR30_Premultiplied;
+        pixelFormat = QImage::Format::Format_A2BGR30_Premultiplied;
     else if(pixel_format_string == "RGB30")
-        pixel_format = QImage::Format::Format_RGB30;
+        pixelFormat = QImage::Format::Format_RGB30;
     else if(pixel_format_string == "A2RGB30_Premultiplied")
-        pixel_format = QImage::Format::Format_A2RGB30_Premultiplied;
+        pixelFormat = QImage::Format::Format_A2RGB30_Premultiplied;
     else if(pixel_format_string == "Alpha8")
-        pixel_format = QImage::Format::Format_Alpha8;
+        pixelFormat = QImage::Format::Format_Alpha8;
     else if(pixel_format_string == "Grayscale8")
-        pixel_format = QImage::Format::Format_Grayscale8;
+        pixelFormat = QImage::Format::Format_Grayscale8;
     else
         std::cerr << "NO FORMAT " << pixel_format_string.toStdString() << '\n';
 }
 
-void Args::ReadFromConfigFile(const QString file_path)
+void cfg::ReadFromConfigFile(const QString file_path)
 {
 
 }
 
-QString Args::getDefaultConfigContent()
+QString cfg::getDefaultConfigContent()
 {
     QJsonDocument document;
     QJsonObject rootObject;
@@ -329,6 +334,7 @@ QString Args::getDefaultConfigContent()
     atlasObject.insert("spritePadding", 1);
     atlasObject.insert("pixelFormat", "ARGB32");
     atlasObject.insert("quality", -1);
+    atlasObject.insert("textureFormat", "PNG");
     rootObject.insert("atlas", atlasObject);
 
     QJsonObject spriteObject;
@@ -340,7 +346,7 @@ QString Args::getDefaultConfigContent()
     return document.toJson();
 }
 
-void Args::ProcessInitDirective(bool is_init)
+void cfg::ProcessInitDirective(bool is_init)
 {
     QFile out_file("atlasConfig");
     if(!out_file.open(QFile::WriteOnly | QFile::Text))

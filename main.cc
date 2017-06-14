@@ -29,17 +29,17 @@ void GenerateAtlas(AtlasPacker& atlas_packer, const QDir &dir);
 void CheckResourceModification()
 {
     // 用户指定了强制打包时，不需要检查后续步骤
-    if (Args::force)
+    if (cfg::force)
     {
         cout << "Force Publication.\n";
         return;
     }
 
-    QFile record_file(Args::output_directory.filePath(".rec"));
+    QFile record_file(cfg::outputDirectory.filePath(".rec"));
 
     // 检查打包记录并且得出是否重新打包
     bool need_repack = true;
-    QFileInfo input_file_info(Args::input.path());
+    QFileInfo input_file_info(cfg::input.path());
     qint64 last_write_time = input_file_info.lastModified().msecsTo(QDateTime());
 
     if (record_file.exists())
@@ -79,7 +79,7 @@ void CheckResourceModification()
 void PackDirectory(const QDir &dir)
 {
     // 检查目录是否被用户排除
-    if (Args::IsExclude(QFileInfo(dir.path())))
+    if (cfg::IsExclude(QFileInfo(dir.path())))
     {
         cout << "EXCLUDE " << dir.absolutePath().toStdString() << "\n";
         file_utils::CopyToResourceDirectory(dir.path());
@@ -115,7 +115,7 @@ void GenerateAtlas(AtlasPacker& atlas_packer, const QDir &dir)
     atlas_packer.PackBin();
 
     // get export atlas filename.
-    QString relative = Args::input_directory.relativeFilePath(dir.path());
+    QString relative = cfg::inputDirectory.relativeFilePath(dir.path());
     atlas_packer.ExportAtlas(relative);
 }
 
@@ -133,7 +133,7 @@ void ProcessFile(const QFileInfo &file_info, AtlasPacker &atlas_packer, vector<Q
 void ProcessRegularFile(QString filename, AtlasPacker &atlas_packer)
 {
     // 检查文件是否被用户排除
-    bool is_exclude = Args::IsExclude(QFileInfo(filename));
+    bool is_exclude = cfg::IsExclude(QFileInfo(filename));
     if (is_exclude)
         cout << "EXCLUDE " << filename.toStdString() << "\n";
 
@@ -149,9 +149,9 @@ int main(int argc, char **argv)
 {
     QCoreApplication a(argc, argv);
 
-    Args::ParseCommandLine(a);
+    cfg::ParseCommandLine(a);
     CheckResourceModification();
 
-    PackDirectory(Args::input);
+    PackDirectory(cfg::input);
     return EXIT_SUCCESS;
 }

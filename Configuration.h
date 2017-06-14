@@ -11,28 +11,29 @@
 
 class QCoreApplication;
 
-class Args
+class cfg
 {
 public:
     static QDir input;
-    static QDir input_directory;
-    static QDir output_directory;
-    static QDir resource_directory;
+    static QDir inputDirectory;
+    static QDir outputDirectory;
+    static QDir resourceDirectory;
 
-    static int max_size, tile_size;
-    static int shape_padding;
+    static int maxSize, spriteSize;
+    static int shapePadding;
 
-    static QVector<QFileInfo> exclude_files;
+    static QVector<QFileInfo> excludeFiles;
 
     static int extrude;
-    static bool crop_alpha;
+    static bool cropAlpha;
     static bool force;
-    static bool power_of_two;
+    static bool POT;
     static bool rotate;
 
     // for image control
-    static QImage::Format pixel_format;
-    static int texture_quality;
+    static QImage::Format pixelFormat;
+    static int textureQuality;
+    static QString textureFormat;
 
     static void ParseCommandLine(const QCoreApplication &application);
     static bool IsExclude(const QFileInfo &file);
