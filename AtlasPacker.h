@@ -109,7 +109,7 @@ public:
      * @param filename  the path to image.
      * @return  if this isn't a image file, or file not exist, return false.
      */
-    bool AddImage(QString filename);
+    QImage* AddImage(QString filename);
     /**
      * pack all images into bin.
      * if there is no image storage in this atlas packer.

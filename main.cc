@@ -140,11 +140,16 @@ void ProcessRegularFile(QString filename, AtlasPacker &atlas_packer)
         return;
     }
 
-    bool is_image = atlas_packer.AddImage(filename);
-    if (!is_image)
+    QImage* image = atlas_packer.AddImage(filename);
+    if (!image)
     {
         file_utils::CopyToResourceDirectory(filename);
         cout << "NOT IMAGE " << filename.toStdString() << "\n";
+    }
+    else if(image->width() > Configuration::spriteSize || image->height() > Configuration::spriteSize)
+    {
+        file_utils::CopyToResourceDirectory(filename);
+        cout << "OVERFLOW " << filename.toStdString() << "\n";
     }
 }
 

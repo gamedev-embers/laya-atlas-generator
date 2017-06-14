@@ -47,12 +47,15 @@ public:
 
 private:
     static void ReadConfigurationFile(QString configFilePath);
-    static QString getDefaultConfigContent();
+    static QString GetDefaultConfigContent();
     static void SetupOutputDirectory    (const QString &value);
     static void SetupResourceDirectory  (const QString &value);
     static void SetupExcludeDirectory   (const QString &value);
-    static void SetupPixelFormat        (QString pixel_format_string);
+    static void SetupPixelFormat        (QString pixelFormatString);
     static void ProcessInitDirective  (bool is_init);
+    static void PrintConfiguration();
+
+    static QString pixelFormatString;
 };
 
 #endif //ATLASGENERATOR_CLI_ARGS_H
