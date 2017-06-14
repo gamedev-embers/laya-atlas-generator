@@ -5,32 +5,33 @@
 #include <QCommandLineOption>
 #include <QCommandLineParser>
 #include <QFile>
-#include <iostream>
-#include <cassert>
-
 #include <QVector>
 #include <QFileInfo>
-#include <QDebug>
-#include <iomanip>
-#include "cli_args.h"
+#include <QtCore/QJsonDocument>
+#include <QtCore/QJsonObject>
+#include <QtCore/QJsonArray>
+#include <QtCore/QTextStream>
 
+#include <cassert>
+#include <iomanip>
+#include <iostream>
+#include "Configuration.h"
+
+// open namespaces
 using std::cout;
 using std::cerr;
 
+// static member definitions
 QDir Args::input;
 QDir Args::input_directory;
 QDir Args::output_directory;
 QDir Args::resource_directory;
-
 int Args::max_size, Args::tile_size;
 int Args::shape_padding;
-
 QImage::Format Args::pixel_format;
-int Args::texture_qulity;
-
+int Args::texture_quality;
 QVector<QFileInfo> Args::exclude_files;
-
-int Args::extrude;
+int  Args::extrude;
 bool Args::crop_alpha;
 bool Args::force;
 bool Args::power_of_two;
@@ -140,6 +141,8 @@ void Args::ParseCommandLine(const QCoreApplication &application)
 
     command_line_parser.process(application);
 
+    ProcessInitDirective(command_line_parser.isSet(init_option));
+
     SetupInputDirectory   (command_line_parser.positionalArguments());
     SetupOutputDirectory  (command_line_parser.isSet(output_option),   command_line_parser.value(output_option));
     SetupResourceDirectory(command_line_parser.isSet(resource_option), command_line_parser.value(resource_option));
@@ -154,7 +157,7 @@ void Args::ParseCommandLine(const QCoreApplication &application)
     crop_alpha = command_line_parser.isSet(crop_alpha_option);
     rotate = command_line_parser.isSet(rotate_option);
     force = command_line_parser.isSet(force_option);
-    texture_qulity = command_line_parser.value(texture_quality_option).toInt();
+    texture_quality = command_line_parser.value(texture_quality_option).toInt();
 }
 
 void Args::SetupInputDirectory(const QStringList &positional_arguments)
@@ -243,62 +246,114 @@ void ::Args::SetupExcludeDirectory(bool is_set, const QString &value)
     cout << "\n";
 }
 
-bool ::Args::isExclude(const QFileInfo &file)
+bool ::Args::IsExclude(const QFileInfo &file)
 {
     auto find_index = std::find(exclude_files.cbegin(), exclude_files.cend(), file);
     return find_index != exclude_files.cend();
 }
 
-void Args::SetupPixelFormat(QString pixel_formamt_string)
+void Args::SetupPixelFormat(QString pixel_format_string)
 {
-    if(pixel_formamt_string == "Mono")
+    if(pixel_format_string == "Mono")
         pixel_format = QImage::Format::Format_Mono;
-    else if(pixel_formamt_string == "MonoLSB")
+    else if(pixel_format_string == "MonoLSB")
         pixel_format = QImage::Format::Format_MonoLSB;
-    else if(pixel_formamt_string == "Indexed8")
+    else if(pixel_format_string == "Indexed8")
         pixel_format = QImage::Format::Format_Indexed8;
-    else if(pixel_formamt_string == "RGB32")
+    else if(pixel_format_string == "RGB32")
         pixel_format = QImage::Format::Format_RGB32;
-    else if(pixel_formamt_string == "ARGB32")
+    else if(pixel_format_string == "ARGB32")
         pixel_format = QImage::Format::Format_ARGB32;
-    else if(pixel_formamt_string == "ARGB32_Premultiplied")
+    else if(pixel_format_string == "ARGB32_Premultiplied")
         pixel_format = QImage::Format::Format_ARGB32_Premultiplied;
-    else if(pixel_formamt_string == "RGB16")
+    else if(pixel_format_string == "RGB16")
         pixel_format = QImage::Format::Format_RGB16;
-    else if(pixel_formamt_string == "ARGB8565_Premultiplied")
+    else if(pixel_format_string == "ARGB8565_Premultiplied")
         pixel_format = QImage::Format::Format_ARGB8565_Premultiplied;
-    else if(pixel_formamt_string == "RGB666")
+    else if(pixel_format_string == "RGB666")
         pixel_format = QImage::Format::Format_RGB666;
-    else if(pixel_formamt_string == "ARGB6666_Premultiplied")
+    else if(pixel_format_string == "ARGB6666_Premultiplied")
         pixel_format = QImage::Format::Format_ARGB6666_Premultiplied;
-    else if(pixel_formamt_string == "RGB555")
+    else if(pixel_format_string == "RGB555")
         pixel_format = QImage::Format::Format_RGB555;
-    else if(pixel_formamt_string == "ARGB8555_Premultiplied")
+    else if(pixel_format_string == "ARGB8555_Premultiplied")
         pixel_format = QImage::Format::Format_ARGB8555_Premultiplied;
-    else if(pixel_formamt_string == "RGB888")
+    else if(pixel_format_string == "RGB888")
         pixel_format = QImage::Format::Format_RGB888;
-    else if(pixel_formamt_string == "RGB444")
+    else if(pixel_format_string == "RGB444")
         pixel_format = QImage::Format::Format_RGB444;
-    else if(pixel_formamt_string == "ARGB4444_Premultiplied")
+    else if(pixel_format_string == "ARGB4444_Premultiplied")
         pixel_format = QImage::Format::Format_ARGB4444_Premultiplied;
-    else if(pixel_formamt_string == "RGBX8888")
+    else if(pixel_format_string == "RGBX8888")
         pixel_format = QImage::Format::Format_RGBX8888;
-    else if(pixel_formamt_string == "RGBA8888")
+    else if(pixel_format_string == "RGBA8888")
         pixel_format = QImage::Format::Format_RGBA8888;
-    else if(pixel_formamt_string == "RGBA8888_Premultiplied")
+    else if(pixel_format_string == "RGBA8888_Premultiplied")
         pixel_format = QImage::Format::Format_RGBA8888_Premultiplied;
-    else if(pixel_formamt_string == "BGR30")
+    else if(pixel_format_string == "BGR30")
         pixel_format = QImage::Format::Format_BGR30;
-    else if(pixel_formamt_string == "A2BGR30_Premultiplied")
+    else if(pixel_format_string == "A2BGR30_Premultiplied")
         pixel_format = QImage::Format::Format_A2BGR30_Premultiplied;
-    else if(pixel_formamt_string == "RGB30")
+    else if(pixel_format_string == "RGB30")
         pixel_format = QImage::Format::Format_RGB30;
-    else if(pixel_formamt_string == "A2RGB30_Premultiplied")
+    else if(pixel_format_string == "A2RGB30_Premultiplied")
         pixel_format = QImage::Format::Format_A2RGB30_Premultiplied;
-    else if(pixel_formamt_string == "Alpha8")
+    else if(pixel_format_string == "Alpha8")
         pixel_format = QImage::Format::Format_Alpha8;
-    else if(pixel_formamt_string == "Grayscale8")
+    else if(pixel_format_string == "Grayscale8")
         pixel_format = QImage::Format::Format_Grayscale8;
     else
-        std::cerr << "NO FORMAT " << pixel_formamt_string.toStdString() << '\n';
+        std::cerr << "NO FORMAT " << pixel_format_string.toStdString() << '\n';
+}
+
+void Args::ReadFromConfigFile(const QString file_path)
+{
+
+}
+
+QString Args::getDefaultConfigContent()
+{
+    QJsonDocument document;
+    QJsonObject rootObject;
+
+    rootObject.insert("inputDir", "required");
+    rootObject.insert("outputDir", "");
+    rootObject.insert("resDir", "");
+    rootObject.insert("force", true);
+    rootObject.insert("includeList", QJsonArray());
+    rootObject.insert("excludeList", QJsonArray());
+
+    QJsonObject atlasObject;
+    atlasObject.insert("size", 2048);
+    atlasObject.insert("POT", false);
+    atlasObject.insert("spritePadding", 1);
+    atlasObject.insert("pixelFormat", "ARGB32");
+    atlasObject.insert("quality", -1);
+    rootObject.insert("atlas", atlasObject);
+
+    QJsonObject spriteObject;
+    spriteObject.insert("size", 512);
+    spriteObject.insert("cropAlpha", true);
+    rootObject.insert("sprite", spriteObject);
+
+    document.setObject(rootObject);
+    return document.toJson();
+}
+
+void Args::ProcessInitDirective(bool is_init)
+{
+    QFile out_file("atlasConfig");
+    if(!out_file.open(QFile::WriteOnly | QFile::Text))
+    {
+        cerr << "Can not open file 'atlasConfig' for writing." << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    QTextStream out_stream(&out_file);
+    out_stream << getDefaultConfigContent();
+    out_stream.flush();
+    out_file.close();
+
+    cout << "SAVE " << QFileInfo(out_file).absoluteFilePath().toStdString() << std::endl;
+    exit(EXIT_SUCCESS);
 }

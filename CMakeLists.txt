@@ -15,12 +15,12 @@ set(SOURCE_FILES
         RectangleBinPack/ShelfBinPack.cpp
         RectangleBinPack/ShelfNextFitBinPack.cpp
         RectangleBinPack/SkylineBinPack.cpp
-        atlas_packer.cc
-        cli_args.cc
+        AtlasPacker.cc
+        Configuration.cc
         main.cc
-        utils.cc
-        data_export.h
-        json_export.cpp)
+        Utils.cc
+        DataExport.h
+        JsonExport.cpp)
 
 add_executable(atlas_generator ${SOURCE_FILES})
 target_link_libraries(atlas_generator Qt5::Widgets)

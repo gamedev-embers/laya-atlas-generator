@@ -7,10 +7,10 @@
 #include <cmath>
 #include <iomanip>
 
-#include "atlas_packer.h"
-#include "utils.h"
-#include "cli_args.h"
-#include "json_export.h"
+#include "AtlasPacker.h"
+#include "Utils.h"
+#include "Configuration.h"
+#include "JsonExport.h"
 
 using FreeRectChoiceHeuristic = rbp::MaxRectsBinPack::FreeRectChoiceHeuristic;
 using rbp::MaxRectsBinPack;
@@ -217,7 +217,7 @@ void AtlasPacker::ExportAtlas(QString relative_path)
             need_free = true;
             canvas = new QImage(canvas->convertToFormat(Args::pixel_format));
         }
-        canvas->save(file_path, nullptr, Args::texture_qulity);
+        canvas->save(file_path, nullptr, Args::texture_quality);
         if(need_free)
             delete canvas;
         cout << "SAVE " << file_path.toStdString() << "\n";

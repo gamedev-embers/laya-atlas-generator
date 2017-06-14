@@ -1,0 +1,21 @@
+{
+    "atlas": {
+        "POT": false,
+        "pixelFormat": "RGBA32",
+        "quality": -1,
+        "size": 2048,
+        "spritePadding": 1
+    },
+    "excludeList": [
+    ],
+    "force": true,
+    "includeList": [
+    ],
+    "inputDir": "required",
+    "outputDir": "",
+    "resDir": "",
+    "sprite": {
+        "cropAlpha": true,
+        "size": 512
+    }
+}

@@ -6,9 +6,9 @@
 #include <iostream>
 #include <QtCore/QTextStream>
 
-#include "atlas_packer.h"
-#include "utils.h"
-#include "json_export.h"
+#include "AtlasPacker.h"
+#include "Utils.h"
+#include "JsonExport.h"
 
 JsonExport::JsonExport():
     json_document(),

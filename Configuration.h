@@ -32,18 +32,22 @@ public:
 
     // for image control
     static QImage::Format pixel_format;
-    static int texture_qulity;
+    static int texture_quality;
 
     static void ParseCommandLine(const QCoreApplication &application);
+    static bool IsExclude(const QFileInfo &file);
+    static void ReadFromConfigFile(const QString file_path);
 
-    static bool isExclude(const QFileInfo& file);
 private:
+    static QString getDefaultConfigContent();
+
     static void SetupInputDirectory   (const QStringList &positional_arguments);
     static void SetupOutputDirectory  (bool is_set, const QString &value);
     static void SetupResourceDirectory(bool is_set, const QString &value);
     static void SetupExcludeDirectory (bool is_set, const QString &value);
 
-    static void SetupPixelFormat(QString pixel_format);
+    static void SetupPixelFormat(QString pixel_format_string);
+    static void ProcessInitDirective(bool is_init);
 };
 
 #endif //ATLASGENERATOR_CLI_ARGS_H

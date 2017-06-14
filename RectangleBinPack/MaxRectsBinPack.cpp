@@ -12,7 +12,7 @@
 #include <cassert>
 #include <cstring>
 #include <cmath>
-#include <cli_args.h>
+#include <Configuration.h>
 
 #include "MaxRectsBinPack.h"
 

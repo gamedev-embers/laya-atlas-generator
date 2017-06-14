@@ -8,9 +8,9 @@
 #include <fstream>
 #include <iostream>
 
-#include "cli_args.h"
-#include "utils.h"
-#include "atlas_packer.h"
+#include "Configuration.h"
+#include "Utils.h"
+#include "AtlasPacker.h"
 
 using std::cout;
 using std::cerr;
@@ -79,7 +79,7 @@ void CheckResourceModification()
 void PackDirectory(const QDir &dir)
 {
     // 检查目录是否被用户排除
-    if (Args::isExclude(QFileInfo(dir.path())))
+    if (Args::IsExclude(QFileInfo(dir.path())))
     {
         cout << "EXCLUDE " << dir.absolutePath().toStdString() << "\n";
         file_utils::CopyToResourceDirectory(dir.path());
@@ -133,7 +133,7 @@ void ProcessFile(const QFileInfo &file_info, AtlasPacker &atlas_packer, vector<Q
 void ProcessRegularFile(QString filename, AtlasPacker &atlas_packer)
 {
     // 检查文件是否被用户排除
-    bool is_exclude = Args::isExclude(QFileInfo(filename));
+    bool is_exclude = Args::IsExclude(QFileInfo(filename));
     if (is_exclude)
         cout << "EXCLUDE " << filename.toStdString() << "\n";
 

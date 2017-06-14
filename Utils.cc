@@ -5,8 +5,8 @@
 #include <QFileInfo>
 #include <QDir>
 
-#include "utils.h"
-#include "cli_args.h"
+#include "Utils.h"
+#include "Configuration.h"
 
 using std::string;
 

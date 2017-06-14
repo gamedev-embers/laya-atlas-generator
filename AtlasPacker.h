@@ -11,7 +11,7 @@
 
 #include "RectangleBinPack/Rect.h"
 #include "RectangleBinPack/MaxRectsBinPack.h"
-#include "data_export.h"
+#include "DataExport.h"
 
 struct ImageInfo
 {
