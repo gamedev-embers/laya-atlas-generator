@@ -33,7 +33,7 @@ AtlasPacker::AtlasPacker() :
 AtlasPacker::~AtlasPacker()
 {
     // free canvases.
-    for (int i = 0; i < canvases.size(); ++i)
+    for (int i = 0; i < (int) canvases.size(); ++i)
     {
         delete canvases[i];
         canvases[i] = nullptr;
@@ -200,7 +200,7 @@ void AtlasPacker::ExportAtlas(QString relative_path)
 
     QString images;
 
-    for (int i = 0; i < canvases.size(); ++i)
+    for (int i = 0; i < (int) canvases.size(); ++i)
     {
         QString file_name = relative_path + (i > 0 ? std::to_string(i).c_str() : "") + "." + Configuration::textureFormat.toLower();
         QString file_path = Configuration::outputDirectory.filePath(file_name);
@@ -337,7 +337,7 @@ void AtlasPacker::GenerateAtlas()
     QImage *canvas = new QImage(best_method.opacity_size.width, best_method.opacity_size.height, QImage::Format_ARGB32);
     canvas->fill(0);
 
-    for (int i = 0; i < best_method.images.size(); ++i)
+    for (int i = 0; i < (int) best_method.images.size(); ++i)
     {
         Rect& rect = best_method.rects.at(i);
         ImageInfo& image_info = best_method.images.at(i);

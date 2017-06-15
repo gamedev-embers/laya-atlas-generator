@@ -10,11 +10,16 @@ CONFIG -= app_bundle
 TEMPLATE = app
 
 SOURCES += \
-    cli_args.cc \
-    atlas_packer.cc \
-    log.cc \
-    utils.cc \
-    main.cc
+    main.cc \
+    RectangleBinPack/GuillotineBinPack.cpp \
+    RectangleBinPack/MaxRectsBinPack.cpp \
+    RectangleBinPack/Rect.cpp \
+    RectangleBinPack/ShelfBinPack.cpp \
+    RectangleBinPack/ShelfNextFitBinPack.cpp \
+    RectangleBinPack/SkylineBinPack.cpp \
+    AtlasPacker.cc \
+    Configuration.cc \
+    JsonExport.cpp
 
 # The following define makes your compiler emit warnings if you use
 # any feature of Qt which as been marked deprecated (the exact warnings
@@ -29,7 +34,14 @@ DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000
 # disables all the APIs deprecated before Qt 6.0.0
 
 HEADERS += \
-    log.height \
-    utils.height \
-    cli_args.height \
-    atlas_packer.height
+    RectangleBinPack/GuillotineBinPack.h \
+    RectangleBinPack/MaxRectsBinPack.h \
+    RectangleBinPack/Rect.h \
+    RectangleBinPack/ShelfBinPack.h \
+    RectangleBinPack/ShelfNextFitBinPack.h \
+    RectangleBinPack/SkylineBinPack.h \
+    AtlasPacker.h \
+    Configuration.h \
+    DataExport.h \
+    JsonExport.h \
+    Utils.h

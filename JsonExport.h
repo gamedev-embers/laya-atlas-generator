@@ -15,9 +15,9 @@ class JsonExport : public DataExport
 public:
     JsonExport();
 
-    virtual void AddImageDescription(const ImageInfo &image_info);
-    virtual void Export(const QString &file_path);
-    virtual void Clear();
+    virtual void AddImageDescription(const ImageInfo &image_info) override;
+    virtual void Export(const QString &file_path) override;
+    virtual void Clear() override;
 
     void SetMetaImages(QString images) override;
 

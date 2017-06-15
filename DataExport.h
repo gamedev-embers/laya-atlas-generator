@@ -5,7 +5,7 @@
 #ifndef ATLAS_GENERATOR_DATA_EXPORT_H
 #define ATLAS_GENERATOR_DATA_EXPORT_H
 
-class ImageInfo;
+struct ImageInfo;
 
 class DataExport
 {
@@ -14,7 +14,7 @@ public:
     virtual void SetMetaImages(QString images) = 0;
     virtual void SetMetaFormat(QString format) = 0;
     virtual void SetMetaSize(int width, int height) = 0;
-    virtual void Export(const QString &file_path)= 0 ;
+    virtual void Export(const QString &file_path)= 0;
     virtual void Clear() = 0;
 };
 
