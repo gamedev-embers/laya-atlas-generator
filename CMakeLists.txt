@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.7)
 project(atlas_generator)
 
-set(CMAKE_PREFIX_PATH /opt/Qt5.8.0/5.8/gcc_64/lib/cmake)
+set(CMAKE_PREFIX_PATH /opt/Qt5.9.0/5.9/gcc_64/lib/cmake/Qt5Widgets)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_AUTOMOC ON)
 find_package(Qt5Widgets)

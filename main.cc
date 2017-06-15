@@ -16,10 +16,11 @@ using std::cout;
 using std::cerr;
 using std::vector;
 
-// pre-definitions.
-void ProcessFile(const QFileInfo &file_info, AtlasPacker& atlas_packer, vector<QDir>& directories);
-void ProcessRegularFile(QString filename, AtlasPacker &atlas_packer);
+vector<QDir> directories;
+
+void ProcessFile(QFileInfo &file_info, AtlasPacker &atlas_packer, vector<QDir> &directories);
 void GenerateAtlas(AtlasPacker& atlas_packer, const QDir &dir);
+void ProcessRegularFile(QString filename, AtlasPacker &atlas_packer);
 
 // 检查资源（输入目录下的所有文件）是否被修改过（自上次打包）。
 // 在资源已修改的情况下，将在调用处继续执行程序。
@@ -76,8 +77,11 @@ void CheckResourceModification()
     }
 }
 
-void PackDirectory(const QDir &dir)
+void PackDirectories()
 {
+    QDir dir = directories.front();
+    directories.erase(directories.begin());
+
     // 检查目录是否被用户排除
     if (Configuration::IsExclude(QFileInfo(dir.path())))
     {
@@ -86,7 +90,6 @@ void PackDirectory(const QDir &dir)
         return;
     }
 
-    vector<QDir> directories;
     // 处理指定目录下所有文件
     QFileInfoList file_list = dir.entryInfoList(QDir::Files | QDir::Dirs | QDir::NoDotAndDotDot);
 
@@ -98,13 +101,6 @@ void PackDirectory(const QDir &dir)
     cout << "\n";
 
     GenerateAtlas(atlas_packer, dir);
-
-    // 打包子目录
-    while (directories.size() > 0)
-    {
-        PackDirectory(directories.back());
-        directories.pop_back();
-    }
 }
 
 void GenerateAtlas(AtlasPacker& atlas_packer, const QDir &dir)
@@ -119,7 +115,7 @@ void GenerateAtlas(AtlasPacker& atlas_packer, const QDir &dir)
     atlas_packer.ExportAtlas(relative);
 }
 
-void ProcessFile(const QFileInfo &file_info, AtlasPacker &atlas_packer, vector<QDir> &directories)
+void ProcessFile(QFileInfo &file_info, AtlasPacker &atlas_packer, vector<QDir> &directories)
 {
     QString file_path = file_info.filePath();
     // 检查到目录
@@ -180,6 +176,25 @@ int main(int argc, char **argv)
     Configuration::ParseCommandLine(a);
     CheckResourceModification();
 
-    PackDirectory(Configuration::inputDirectory);
+    // get files in input directory.
+    QFileInfoList file_list = Configuration::inputDirectory.entryInfoList(QDir::Files | QDir::Dirs | QDir::NoDotAndDotDot);
+    for(const QFileInfo & fileInfo : file_list)
+    {
+        QString filePath(fileInfo.filePath());
+        if(fileInfo.isDir())
+        {
+            directories.push_back(QDir(filePath));
+        }
+        // skip images in input directory
+        else
+        {
+            file_utils::CopyToResourceDirectory(filePath);
+            cout << "SKIP " << filePath.toStdString() << "\n";
+        }
+    }
+
+    while(directories.size() > 0)
+        PackDirectories();
+
     return EXIT_SUCCESS;
 }

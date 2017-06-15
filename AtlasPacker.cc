@@ -244,7 +244,6 @@ void AtlasPacker::AddImage(QString filename, QImage *image)
 
     // storage image information
     images.push_back(image_info);
-
 }
 
 void AtlasPacker::PackBin()

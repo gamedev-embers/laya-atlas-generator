@@ -9,7 +9,7 @@
     "excludeList": [
     "comp/subdir"
     ],
-    "force": false,
+    "force": true,
     "includeList": [
     "comp/image.png"
     ],

@@ -445,7 +445,7 @@ void Configuration::ProcessInitDirective(bool is_init)
 void Configuration::PrintConfiguration()
 {
     cout
-         << std::setw(25) << std::left << "input directory" << input.path().toStdString() << "\n"
+         << std::setw(25) << std::left << "input directory" << inputDirectory.path().toStdString() << "\n"
          << std::setw(25) << std::left << "output directory" << outputDirectory.path().toStdString() << "\n"
          << std::setw(25) << std::left << "resource directory" << resourceDirectory.path().toStdString() << "\n"
          << std::setw(25) << std::left << "crop alpha" << std::boolalpha << cropAlpha << "\n"
