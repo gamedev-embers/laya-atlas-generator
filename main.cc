@@ -140,17 +140,36 @@ void ProcessRegularFile(QString filename, AtlasPacker &atlas_packer)
         return;
     }
 
-    // todo 加载图集放到此处，ＡｄｄＩｍａｇｅ接受ＱＩｍａｇｅ类型参数
-    QImage* image = atlas_packer.AddImage(filename);
-    if (!image)
+    QImage *image = new QImage(filename);
+
+    // is not a image.
+    if (image->isNull())
     {
         file_utils::CopyToResourceDirectory(filename);
         cout << "NOT IMAGE " << filename.toStdString() << "\n";
     }
-    else if(image->width() > Configuration::spriteSize || image->height() > Configuration::spriteSize)
+    else
     {
-        file_utils::CopyToResourceDirectory(filename);
-        cout << "OVERFLOW " << filename.toStdString() << "\n";
+        // image's size is overflow.
+        if(image->width() > Configuration::spriteSize || image->height() > Configuration::spriteSize)
+        {
+            if(Configuration::IsInclude(QFileInfo(filename)))
+            {
+                cout << "INCLUDE " << filename.toStdString() << "\n";
+            }
+            else
+            {
+                file_utils::CopyToResourceDirectory(filename);
+                cout << "OVERFLOW " << filename.toStdString() << "\n";
+                return;
+            }
+        }
+
+        // print information. We are loading image now.
+        cout << "LOAD "
+             << file_utils::GetRelativeToInputDirectoryPath(filename).toStdString()
+             << "\n";
+        atlas_packer.AddImage(filename, image);
     }
 }
 

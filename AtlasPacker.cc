@@ -228,21 +228,8 @@ void AtlasPacker::ExportAtlas(QString relative_path)
     cout << "SAVE " << data_export_file.toStdString() << "\n\n";
 }
 
-QImage* AtlasPacker::AddImage(QString filename)
+void AtlasPacker::AddImage(QString filename, QImage *image)
 {
-    QImage *image = new QImage(filename);
-
-    // this indicate <filename> is not a image.
-    if (image->isNull())
-    {
-        return nullptr;
-    }
-
-    // image's size is overflow.
-    if(image->width() > Configuration::spriteSize ||
-       image->height() > Configuration::spriteSize)
-        return image;
-
     // convert image format to ARGB32
     if (image->format() != QImage::Format_ARGB32)
     {
@@ -251,11 +238,6 @@ QImage* AtlasPacker::AddImage(QString filename)
         image = new QImage(new_image);
     }
 
-    // print information. We are loading image now.
-    cout << "LOAD "
-         << file_utils::GetRelativeToInputDirectoryPath(filename).toStdString()
-         << "\n";
-
     ImageInfo image_info;
     image_info.image = image;
     image_info.filename = filename;
@@ -263,7 +245,6 @@ QImage* AtlasPacker::AddImage(QString filename)
     // storage image information
     images.push_back(image_info);
 
-    return image;
 }
 
 void AtlasPacker::PackBin()

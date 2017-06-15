@@ -7,11 +7,11 @@
         "textureFormat": "PNG"
     },
     "excludeList": [
-    "comp/image.png",
     "comp/subdir"
     ],
-    "force": true,
+    "force": false,
     "includeList": [
+    "comp/image.png"
     ],
     "inputDir": "res",
     "outputDir": "",
@@ -21,6 +21,6 @@
         "extrude": 1,
         "padding": 1,
         "rotation": false,
-        "size": 512
+        "size": 200
     }
 }

@@ -39,19 +39,22 @@ public:
 
     // other properties
     static bool force;
-    static QVector<QFileInfo> excludeFiles;
+    static QVector<QFileInfo> excludeImages;
+    static QVector<QFileInfo> includeImages;
 
     // static function declarations
     static void ParseCommandLine(const QCoreApplication &application);
-    static bool IsExclude(const QFileInfo &file);
+    static bool IsExclude(const QFileInfo &fileInfo);
+
+    static bool IsInclude(QFileInfo fileInfo);
 
 private:
     static void ReadConfigurationFile(QString configFilePath);
     static QString GetDefaultConfigContent();
     static void SetupOutputDirectory    (const QString &value);
     static void SetupResourceDirectory  (const QString &value);
-    static void SetupExcludeDirectory   (const QString &value);
-    static void SetupExcludeDirectory   (const QJsonArray& list);
+    static void SetUpFileList           (const QString &value, QVector<QFileInfo>& container);
+    static void SetUpFileList           (const QJsonArray& list, QVector<QFileInfo>& container);
     static void SetupPixelFormat        (QString pixelFormatString);
     static void ProcessInitDirective  (bool is_init);
     static void PrintConfiguration();

@@ -40,15 +40,16 @@ int Configuration::spriteSize,
 
 // texture properties
 QImage::Format Configuration::pixelFormat;
-QString        Configuration::textureFormat;
+QString Configuration::textureFormat,
+        Configuration::pixelFormatString;
 int Configuration::textureQuality,
     Configuration::maxSize;
 bool Configuration::POT;
 
 // other properties
 bool Configuration::force;
-QVector<QFileInfo> Configuration::excludeFiles;
-QString Configuration::pixelFormatString;
+QVector<QFileInfo> Configuration::excludeImages;
+QVector<QFileInfo> Configuration::includeImages;
 
 // static function definitions
 void Configuration::ParseCommandLine(const QCoreApplication &application)
@@ -84,13 +85,14 @@ void Configuration::ParseCommandLine(const QCoreApplication &application)
             "1"
     );
     QCommandLineOption includeImagesOption(
-            QStringList() << "includeImages",
-            "The picture in include list have to packed anyway, split by ','"
+            QStringList() << "i" << "include",
+            "The picture in include list have to packed anyway, split by ','",
+            "file1,file2..."
     );
     QCommandLineOption excludeImagesOption(
             QStringList() << "x" << "exclude",
             "The picture in exclude list will not packed, split by ','.",
-            "exclude directory"
+            "file1,file2..."
     );
     QCommandLineOption spritePaddingOption(
             QStringList() << "p" << "spritePadding",
@@ -184,7 +186,8 @@ void Configuration::ParseCommandLine(const QCoreApplication &application)
             force             = commandLineParser.isSet(force_option);
 
             SetupPixelFormat(commandLineParser.value(pixelFormatOption));
-            SetupExcludeDirectory(commandLineParser.value(excludeImagesOption));
+            SetUpFileList(commandLineParser.value(excludeImagesOption), excludeImages);
+            SetUpFileList(commandLineParser.value(includeImagesOption), includeImages);
         } else
         {
             ReadConfigurationFile(input.filePath());
@@ -248,7 +251,8 @@ void Configuration::ReadConfigurationFile(QString configFilePath)
     bool success = inputDirectory.makeAbsolute();
     assert(success);
 
-    SetupExcludeDirectory(rootObject.value("excludeList").toArray());
+    SetUpFileList(rootObject.value("excludeList").toArray(), excludeImages);
+    SetUpFileList(rootObject.value("includeList").toArray(), includeImages);
     SetupPixelFormat(atlasObject.value("pixelFormat").toString());
 }
 
@@ -278,7 +282,7 @@ void Configuration::SetupResourceDirectory(const QString &value)
     assert(success);
 }
 
-void ::Configuration::SetupExcludeDirectory(const QString &value)
+void ::Configuration::SetUpFileList(const QString &value, QVector<QFileInfo>& container)
 {
     if(value.isEmpty())
     {
@@ -295,12 +299,12 @@ void ::Configuration::SetupExcludeDirectory(const QString &value)
             file_info.setFile(inputDirectory.filePath(file_path));
         }
 
-        excludeFiles.push_back(file_info);
+        container.push_back(file_info);
     }
     cout << "\n";
 }
 
-void Configuration::SetupExcludeDirectory(const QJsonArray &list)
+void Configuration::SetUpFileList(const QJsonArray &list, QVector<QFileInfo>& container)
 {
     for(auto pos = list.constBegin(); pos != list.constEnd(); ++pos)
     {
@@ -308,14 +312,20 @@ void Configuration::SetupExcludeDirectory(const QJsonArray &list)
         QFileInfo fileInfo(path);
         if(fileInfo.isRelative())
             fileInfo.setFile(inputDirectory.filePath(path));
-        excludeFiles.push_back(fileInfo);
+        container.push_back(fileInfo);
     }
 }
 
-bool ::Configuration::IsExclude(const QFileInfo &file)
+bool ::Configuration::IsExclude(const QFileInfo &fileInfo)
 {
-    auto find_index = std::find(excludeFiles.cbegin(), excludeFiles.cend(), file);
-    return find_index != excludeFiles.cend();
+    auto find_index = std::find(excludeImages.cbegin(), excludeImages.cend(), fileInfo);
+    return find_index != excludeImages.cend();
+}
+
+bool Configuration::IsInclude(QFileInfo fileInfo)
+{
+    auto find_index = std::find(includeImages.cbegin(), includeImages.cend(), fileInfo);
+    return find_index != includeImages.cend();
 }
 
 void Configuration::SetupPixelFormat(QString pixelFormatString)
@@ -443,7 +453,12 @@ void Configuration::PrintConfiguration()
          << std::setw(25) << std::left << "texture quality" << textureQuality << "\n"
          << std::setw(25) << std::left << "POT" << POT << "\n\n"
          << "EXCLUDE IMAGES\n";
-    for(const QFileInfo& fileInfo : excludeFiles)
+    for(const QFileInfo& fileInfo : excludeImages)
+        cout << "    " << fileInfo.absoluteFilePath().toStdString() << "\n";
+    cout
+        << "\n"
+        << "Include IMAGES\n";
+    for(const QFileInfo& fileInfo : includeImages)
         cout << "    " << fileInfo.absoluteFilePath().toStdString() << "\n";
     cout << "\n";
 }

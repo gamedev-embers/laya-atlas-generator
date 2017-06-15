@@ -104,12 +104,12 @@ public:
     AtlasPacker();
     ~AtlasPacker();
     /**
-     * try to add a image to AtlasPacker.
+     * add a image to AtlasPacker.
      *
      * @param filename  the path to image.
-     * @return  if this isn't a image file, or file not exist, return false.
+     * @param image image object.
      */
-    QImage* AddImage(QString filename);
+    void AddImage(QString filename, QImage* image);
     /**
      * pack all images into bin.
      * if there is no image storage in this atlas packer.
