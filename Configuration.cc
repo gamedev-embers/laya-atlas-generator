@@ -165,6 +165,12 @@ void Configuration::ParseCommandLine(const QCoreApplication &application)
     // process user input
     ProcessInitDirective(commandLineParser.isSet(initOption));
 
+    if(commandLineParser.positionalArguments().isEmpty())
+    {
+        cerr << "Wrong input. See --help." << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
     input = QFileInfo(commandLineParser.positionalArguments().at(0));
     bool success = input.makeAbsolute();
     assert(success);
