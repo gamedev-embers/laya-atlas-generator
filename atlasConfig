@@ -7,11 +7,13 @@
         "textureFormat": "PNG"
     },
     "excludeList": [
+    "comp/image.png",
+    "comp/subdir"
     ],
     "force": true,
     "includeList": [
     ],
-    "inputDir": "required",
+    "inputDir": "res",
     "outputDir": "",
     "resDir": "",
     "sprite": {

@@ -212,41 +212,43 @@ void Configuration::ReadConfigurationFile(QString configFilePath)
 
     // read content
     QTextStream in_stream(&configFile);
-    QJsonDocument config_document;
 
     // parse content
     auto content = in_stream.readAll().toUtf8();
     QJsonParseError error;
-    config_document.fromJson(content, &error);
+    QJsonDocument config_document = QJsonDocument::fromJson(content, &error);
 
     // process parser error
     if(error.error != QJsonParseError::ParseError::NoError)
     {
-        cerr << "JSON Parser Error: " error.errorString().toStdString() << std::endl;
+        cerr << "JSON Parser Error: " << error.errorString().toStdString() << std::endl;
         exit(EXIT_FAILURE);
     }
 
     // retrieve data
-    QJsonObject rootObject = config_document.object();
-    QJsonObject atlasObject = rootObject.value("atlas").toObject();
+    QJsonObject rootObject   = config_document.object();
+    QJsonObject atlasObject  = rootObject.value("atlas").toObject();
     QJsonObject spriteObject = rootObject.value("sprite").toObject();
-    QJsonArray excludeArray = rootObject.value("excludeList").toArray();
-    QJsonArray includeArray = rootObject.value("includeList").toArray();
-    POT = atlasObject.value("POT").toBool();
-    textureQuality = atlasObject.value("quality").toInt();
-    maxSize = atlasObject.value("size").toInt();
-    textureFormat = atlasObject.value("textureFormat").toString();
-    force = rootObject.value("force").toBool();
-    inputDirectory = rootObject.value("inputDir").toString();
-    outputDirectory = rootObject.value("outputDir").toString();
-    resourceDirectory = rootObject.value("resDir").toString();
-    cropAlpha = spriteObject.value("cropAlpha").toBool();
-    extrude = spriteObject.value("extrude").toInt();
-    spritePadding = spriteObject.value("padding").toInt();
-    rotation = spriteObject.value("rotation").toBool();
-    spriteSize = spriteObject.value("size").toInt();
+    QJsonArray excludeArray  = rootObject.value("excludeList").toArray();
+    QJsonArray includeArray  = rootObject.value("includeList").toArray();
+    POT                      = atlasObject.value("POT").toBool();
+    textureQuality           = atlasObject.value("quality").toInt();
+    maxSize                  = atlasObject.value("size").toInt();
+    textureFormat            = atlasObject.value("textureFormat").toString();
+    force                    = rootObject.value("force").toBool();
+    inputDirectory           = rootObject.value("inputDir").toString();
+    outputDirectory          = rootObject.value("outputDir").toString();
+    resourceDirectory        = rootObject.value("resDir").toString();
+    cropAlpha                = spriteObject.value("cropAlpha").toBool();
+    extrude                  = spriteObject.value("extrude").toInt();
+    spritePadding            = spriteObject.value("padding").toInt();
+    rotation                 = spriteObject.value("rotation").toBool();
+    spriteSize               = spriteObject.value("size").toInt();
 
-//    SetupExcludeDirectory();
+    bool success = inputDirectory.makeAbsolute();
+    assert(success);
+
+    SetupExcludeDirectory(rootObject.value("excludeList").toArray());
     SetupPixelFormat(atlasObject.value("pixelFormat").toString());
 }
 
@@ -283,8 +285,6 @@ void ::Configuration::SetupExcludeDirectory(const QString &value)
         return;
     }
 
-    cout << "EXCLUDE IMAGES\n";
-
     QStringList exclude_files_in_string = value.split(',');
     for (int i = 0; i < exclude_files_in_string.size(); ++i)
     {
@@ -296,10 +296,20 @@ void ::Configuration::SetupExcludeDirectory(const QString &value)
         }
 
         excludeFiles.push_back(file_info);
-
-        cout << "    " << file_info.absoluteFilePath().toStdString() << "\n";
     }
     cout << "\n";
+}
+
+void Configuration::SetupExcludeDirectory(const QJsonArray &list)
+{
+    for(auto pos = list.constBegin(); pos != list.constEnd(); ++pos)
+    {
+        QString path((*pos).toString());
+        QFileInfo fileInfo(path);
+        if(fileInfo.isRelative())
+            fileInfo.setFile(inputDirectory.filePath(path));
+        excludeFiles.push_back(fileInfo);
+    }
 }
 
 bool ::Configuration::IsExclude(const QFileInfo &file)
@@ -418,7 +428,7 @@ void Configuration::ProcessInitDirective(bool is_init)
 
 void Configuration::PrintConfiguration()
 {
-    cout 
+    cout
          << std::setw(25) << std::left << "input directory" << input.path().toStdString() << "\n"
          << std::setw(25) << std::left << "output directory" << outputDirectory.path().toStdString() << "\n"
          << std::setw(25) << std::left << "resource directory" << resourceDirectory.path().toStdString() << "\n"
@@ -431,5 +441,9 @@ void Configuration::PrintConfiguration()
          << std::setw(25) << std::left << "pixel format" << pixelFormatString.toStdString() << "\n"
          << std::setw(25) << std::left << "texture format" << textureFormat.toStdString() << "\n"
          << std::setw(25) << std::left << "texture quality" << textureQuality << "\n"
-         << std::setw(25) << std::left << "POT" << POT << "\n\n";
+         << std::setw(25) << std::left << "POT" << POT << "\n\n"
+         << "EXCLUDE IMAGES\n";
+    for(const QFileInfo& fileInfo : excludeFiles)
+        cout << "    " << fileInfo.absoluteFilePath().toStdString() << "\n";
+    cout << "\n";
 }

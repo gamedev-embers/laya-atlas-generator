@@ -51,6 +51,7 @@ private:
     static void SetupOutputDirectory    (const QString &value);
     static void SetupResourceDirectory  (const QString &value);
     static void SetupExcludeDirectory   (const QString &value);
+    static void SetupExcludeDirectory   (const QJsonArray& list);
     static void SetupPixelFormat        (QString pixelFormatString);
     static void ProcessInitDirective  (bool is_init);
     static void PrintConfiguration();

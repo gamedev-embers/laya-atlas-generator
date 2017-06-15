@@ -140,6 +140,7 @@ void ProcessRegularFile(QString filename, AtlasPacker &atlas_packer)
         return;
     }
 
+    // todo 加载图集放到此处，ＡｄｄＩｍａｇｅ接受ＱＩｍａｇｅ类型参数
     QImage* image = atlas_packer.AddImage(filename);
     if (!image)
     {
