@@ -1,9 +1,9 @@
-#include <QCoreApplication>
-#include <QDir>
-#include <QImage>
-#include <QTextStream>
-#include <QDateTime>
-#include <QTimer>
+#include <QtCore/QCoreApplication>
+#include <QtCore/QDir>
+#include <QtCore/QTextStream>
+#include <QtCore/QDateTime>
+#include <QtCore/QTimer>
+#include <QtGui/QImage>
 
 #include <fstream>
 #include <iostream>

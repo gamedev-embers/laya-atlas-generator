@@ -5,8 +5,8 @@
 #ifndef ATLAS_GENERATOR_JSONEXPORT_H
 #define ATLAS_GENERATOR_JSONEXPORT_H
 
-#include <QJsonDocument>
-#include <QJsonObject>
+#include <QtCore/QJsonDocument>
+#include <QtCore/QJsonObject>
 
 #include "DataExport.h"
 

@@ -1,10 +1,11 @@
 cmake_minimum_required(VERSION 3.7)
 project(atlas_generator)
 
-set(CMAKE_PREFIX_PATH /opt/Qt5.9.0/5.9/gcc_64/lib/cmake/Qt5Widgets)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_AUTOMOC ON)
-find_package(Qt5Widgets)
+
+find_package(Qt5Core)
+find_package(Qt5Gui)
 
 set(CMAKE_CXX_STANDARD 14)
 
@@ -23,4 +24,6 @@ set(SOURCE_FILES
         JsonExport.cpp)
 
 add_executable(atlas_generator ${SOURCE_FILES})
-target_link_libraries(atlas_generator Qt5::Widgets)
+target_link_libraries(atlas_generator
+        Qt5::Core
+        Qt5::Gui)

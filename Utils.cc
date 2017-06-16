@@ -1,9 +1,9 @@
 //
 // Created by wengxiang on 2017/2/4.
 //
-#include <QString>
-#include <QFileInfo>
-#include <QDir>
+#include <QtCore/QString>
+#include <QtCore/QFileInfo>
+#include <QtCore/QDir>
 
 #include "Utils.h"
 #include "Configuration.h"

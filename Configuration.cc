@@ -2,11 +2,11 @@
 // Created by wengxiang on 2017/1/28.
 //
 
-#include <QCommandLineOption>
-#include <QCommandLineParser>
-#include <QFile>
-#include <QVector>
-#include <QFileInfo>
+#include <QtCore/QCommandLineOption>
+#include <QtCore/QCommandLineParser>
+#include <QtCore/QFile>
+#include <QtCore/QVector>
+#include <QtCore/QFileInfo>
 #include <QtCore/QJsonDocument>
 #include <QtCore/QJsonObject>
 #include <QtCore/QJsonArray>
@@ -167,7 +167,7 @@ void Configuration::ParseCommandLine(const QCoreApplication &application)
 
     if(commandLineParser.positionalArguments().isEmpty())
     {
-        cerr << "Wrong input. See --help." << std::endl;
+        cerr << "wrong input. See --help." << std::endl;
         exit(EXIT_FAILURE);
     }
 

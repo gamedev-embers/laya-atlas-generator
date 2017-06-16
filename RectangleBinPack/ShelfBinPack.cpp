@@ -10,6 +10,7 @@
 
 #include <cassert>
 #include <cstring>
+#include <algorithm>
 
 #include "ShelfBinPack.h"
 

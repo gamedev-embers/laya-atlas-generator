@@ -5,10 +5,10 @@
 #ifndef ATLASGENERATOR_CLI_ARGS_H
 #define ATLASGENERATOR_CLI_ARGS_H
 
-#include <QString>
-#include <QDir>
+#include <QtCore/QString>
+#include <QtCore/QDir>
+#include <QtCore/QCommandLineParser>
 #include <QtGui/QImage>
-#include <QCommandLineParser>
 
 class QCoreApplication;
 

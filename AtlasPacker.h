@@ -5,8 +5,8 @@
 #ifndef ATLASGENERATOR_ATLAS_PACKER_H
 #define ATLASGENERATOR_ATLAS_PACKER_H
 
-#include <QVector>
-#include <QImage>
+#include <QtCore/QVector>
+#include <QtGui/QImage>
 #include <QtCore/QDir>
 
 #include "RectangleBinPack/Rect.h"

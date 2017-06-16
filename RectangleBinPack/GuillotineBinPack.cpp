@@ -11,7 +11,7 @@
 
 #include <cassert>
 #include <cstring>
-#include <cmath>
+#include <algorithm>
 
 #include "GuillotineBinPack.h"
 
