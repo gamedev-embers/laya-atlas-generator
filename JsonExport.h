@@ -25,6 +25,8 @@ public:
 
     void SetMetaSize(int width, int height) override;
 
+    void SetMetaPrefix(QString images) override;
+
 private:
     QJsonDocument json_document;
     QJsonObject frames_object;

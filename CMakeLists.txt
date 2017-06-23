@@ -4,6 +4,10 @@ project(atlas_generator)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_AUTOMOC ON)
 
+SET(CMAKE_PREFIX_PATH
+        /opt/Qt5.9.0/5.9/gcc_64/lib/cmake/Qt5Core
+        /opt/Qt5.9.0/5.9/gcc_64/lib/cmake/Qt5Gui)
+
 find_package(Qt5Core)
 find_package(Qt5Gui)
 

@@ -12,7 +12,6 @@
 #include <QtCore/QJsonArray>
 #include <QtCore/QTextStream>
 
-#include <cassert>
 #include <iomanip>
 #include <iostream>
 
@@ -62,7 +61,7 @@ void Configuration::ParseCommandLine(const QCoreApplication &application)
     );
 
     QCommandLineOption resourceOption(
-            QStringList() << "r" << "resource",
+            QStringList() << "d" << "resource",
             "Thr directory of files cannot be packed.",
             "directory"
     );
@@ -172,8 +171,7 @@ void Configuration::ParseCommandLine(const QCoreApplication &application)
     }
 
     input = QFileInfo(commandLineParser.positionalArguments().at(0));
-    bool success = input.makeAbsolute();
-    assert(success);
+    input.makeAbsolute();
 
     if (input.exists())
     {
@@ -194,12 +192,24 @@ void Configuration::ParseCommandLine(const QCoreApplication &application)
             SetupPixelFormat(commandLineParser.value(pixelFormatOption));
             SetUpFileList(commandLineParser.value(excludeImagesOption), excludeImages);
             SetUpFileList(commandLineParser.value(includeImagesOption), includeImages);
+            SetupOutputDirectory(commandLineParser.value(outputOption));
+            SetupResourceDirectory(commandLineParser.value(resourceOption));
         } else
         {
             ReadConfigurationFile(input.filePath());
+
+            // outputOption & resourceOption can be overwrite by cl args.
+            if(commandLineParser.isSet(outputOption))
+            {
+                SetupOutputDirectory(commandLineParser.value(outputOption));
+            }
+            if(commandLineParser.isSet(resourceOption))
+            {
+                SetupResourceDirectory(commandLineParser.value(resourceOption));
+            }
         }
-        SetupOutputDirectory(commandLineParser.value(outputOption));
-        SetupResourceDirectory(commandLineParser.value(resourceOption));
+
+        spriteSize = std::min(spriteSize, maxSize);
 
         PrintConfiguration();
     } else
@@ -254,12 +264,13 @@ void Configuration::ReadConfigurationFile(QString configFilePath)
     rotation                 = spriteObject.value("rotation").toBool();
     spriteSize               = spriteObject.value("size").toInt();
 
-    bool success = inputDirectory.makeAbsolute();
-    assert(success);
+    inputDirectory.makeAbsolute();
 
     SetUpFileList(rootObject.value("excludeList").toArray(), excludeImages);
     SetUpFileList(rootObject.value("includeList").toArray(), includeImages);
     SetupPixelFormat(atlasObject.value("pixelFormat").toString());
+    SetupOutputDirectory(rootObject.value("outputDir").toString());
+    SetupResourceDirectory(rootObject.value("resDir").toString());
 }
 
 void Configuration::SetupOutputDirectory(const QString &value)
@@ -269,10 +280,8 @@ void Configuration::SetupOutputDirectory(const QString &value)
     else
         outputDirectory = QDir(value);
 
-    bool success = outputDirectory.mkpath(".");
-    assert(success);
-    success = outputDirectory.makeAbsolute();
-    assert(success);
+    outputDirectory.mkpath(".");
+    outputDirectory.makeAbsolute();
 }
 
 void Configuration::SetupResourceDirectory(const QString &value)
@@ -282,10 +291,8 @@ void Configuration::SetupResourceDirectory(const QString &value)
     else
         resourceDirectory = QDir(value);
 
-    bool success = resourceDirectory.mkpath(".");
-    assert(success);
-    success = resourceDirectory.makeAbsolute();
-    assert(success);
+    resourceDirectory.mkpath(".");
+    resourceDirectory.makeAbsolute();
 }
 
 void ::Configuration::SetUpFileList(const QString &value, QVector<QFileInfo>& container)

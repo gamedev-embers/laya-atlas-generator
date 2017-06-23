@@ -224,6 +224,7 @@ void AtlasPacker::ExportAtlas(QString relative_path)
 
     QString data_export_file = Configuration::outputDirectory.filePath(relative_path + ".atlas");
     data_export->SetMetaImages(images);
+    data_export->SetMetaPrefix(relative_path + "/");
     data_export->Export(data_export_file);
     cout << "SAVE " << data_export_file.toStdString() << "\n\n";
 }
@@ -364,10 +365,10 @@ void AtlasPacker::GenerateAtlas()
                 << ")"
                 << "\n";
 
-        image_info.frame.x = rect.x;
-        image_info.frame.y = rect.y;
-        image_info.frame.width = rect.width;
-        image_info.frame.height = rect.height;
+        image_info.frame.x = rect.x + Configuration::extrude;
+        image_info.frame.y = rect.y + Configuration::extrude;
+        image_info.frame.width = rect.width - Configuration::extrude * 2;
+        image_info.frame.height = rect.height - Configuration::extrude * 2;
 
         data_export->AddImageDescription(image_info);
         ImageDrawImage(*canvas, *(image_info.image), rect.x, rect.y);

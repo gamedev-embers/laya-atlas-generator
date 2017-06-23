@@ -1,0 +1,1 @@
+set(AM_OLD_COMPILE_SETTINGS "QT_CORE_LIB;QT_GUI_LIB;QT_NO_DEBUG ~~~ /home/survivor/Documents/cpp/atlas-generator/cmake-build-minsizerel;/home/survivor/Documents/cpp/atlas-generator;/opt/Qt5.9.0/5.9/gcc_64/include;/opt/Qt5.9.0/5.9/gcc_64/include/QtCore;/opt/Qt5.9.0/5.9/gcc_64/./mkspecs/linux-g++;/opt/Qt5.9.0/5.9/gcc_64/include/QtGui;/usr/include ~~~  ~~~ FALSE ~~~ ")

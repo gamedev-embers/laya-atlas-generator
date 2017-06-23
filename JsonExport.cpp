@@ -52,12 +52,16 @@ void JsonExport::AddImageDescription(const ImageInfo &image_info)
     sprite_object.insert("sourceSize", source_size_object);
     sprite_object.insert("idx", image_info.image_index);
 
-    frames_object.insert(file_utils::GetRelativeToInputDirectoryPath(image_info.filename), sprite_object);
+    frames_object.insert(QFileInfo(image_info.filename).fileName(), sprite_object);
 }
 
 void JsonExport::SetMetaImages(QString images)
 {
-    meta_object.insert("images", images);
+    meta_object.insert("image", images);
+}
+
+void JsonExport::SetMetaPrefix(QString prefix) {
+    meta_object.insert("prefix", prefix);
 }
 
 void JsonExport::SetMetaFormat(QString format)

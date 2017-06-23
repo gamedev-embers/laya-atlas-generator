@@ -12,6 +12,7 @@ class DataExport
 public:
     virtual void AddImageDescription(const ImageInfo &image_info) = 0;
     virtual void SetMetaImages(QString images) = 0;
+    virtual void SetMetaPrefix(QString prefix) = 0;
     virtual void SetMetaFormat(QString format) = 0;
     virtual void SetMetaSize(int width, int height) = 0;
     virtual void Export(const QString &file_path)= 0;

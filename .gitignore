@@ -1,5 +1,6 @@
 *.pro.user.*
 cmake-build-debug
+cmake-build-minsizerel
 default_output
 default_resource
 .idea
