@@ -8,7 +8,7 @@
 namespace file_utils
 {
     QString GetRelativeToInputDirectoryPath(QString path);
-    void Copy(const QString &from, const QString &to);
+    bool Copy(const QString &from, const QString &to);
     void CopyToResourceDirectory(const QString &path);
 }
 

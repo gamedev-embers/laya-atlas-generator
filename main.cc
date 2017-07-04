@@ -196,5 +196,7 @@ int main(int argc, char **argv)
     while(directories.size() > 0)
         PackDirectories();
 
+    cout << std::flush;
+
     return EXIT_SUCCESS;
 }

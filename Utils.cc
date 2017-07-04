@@ -5,33 +5,48 @@
 #include <QtCore/QFileInfo>
 #include <QtCore/QDir>
 
+#include <fstream>
+#include <iostream>
+
 #include "Utils.h"
 #include "Configuration.h"
 
 using std::string;
+using std::ifstream;
+using std::ofstream;
+using std::ios;
+using std::cerr;
+using std::endl;
 
-void file_utils::Copy(const QString &from, const QString &to)
+bool file_utils::Copy(const QString &from, const QString &to)
 {
-    QString command, arg;
-#ifdef Q_OS_WIN
-    if(QFileInfo(from).isDir())
+    ifstream in;
+    ofstream out;
+    in.open(from.toStdString(), ios::binary);
+
+    if(in.fail())
     {
-
+       cerr<<"Error: Fail to open the source file."<<endl;
+       in.close();
+       out.close();
+       return false;
     }
-#else
-    arg = QFileInfo(from).isDir() ? "rf" : "f";
 
-    // 先移除文件，避免文件夹和文件同名时出问题
-    command = QString("rm -rf %2").arg(to);
-    system(command.toStdString().c_str());
-
-    // 使用系统命令复制文件。
-    command = QString("cp -%1 %2 %3")
-            .arg(arg)
-            .arg(from)
-            .arg(to);
-#endif
-    system(command.toStdString().c_str());
+    out.open(to.toStdString(), ios::binary);
+    if(out.fail())
+    {
+       cerr<<"Error: Fail to create the new file."<<endl;
+       out.close();
+       in.close();
+       return false;
+    }
+    else
+    {
+       out<<in.rdbuf();
+       out.close();
+       in.close();
+       return true;
+    }
 }
 
 void ::file_utils::CopyToResourceDirectory(const QString &path)

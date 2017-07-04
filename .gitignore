@@ -1,4 +1,6 @@
 *.pro.user.*
+build
+release
 cmake-build-debug
 cmake-build-minsizerel
 default_output

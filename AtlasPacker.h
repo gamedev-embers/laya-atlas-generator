@@ -75,7 +75,8 @@ private:
      * @param method            specify heuristic method.
      */
     void StorageInsertResult(QVector<HeuristicResult> &heuristicResult,
-                             rbp::MaxRectsBinPack::FreeRectChoiceHeuristic method);
+                             rbp::MaxRectsBinPack::FreeRectChoiceHeuristic method,
+                             int type);
 
     /**
      * generate atlas recursively.

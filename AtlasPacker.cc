@@ -306,11 +306,16 @@ void AtlasPacker::GenerateAtlas()
     // 计算各种排列方式的优劣
     QVector<HeuristicResult> heuristic_results;
 
-    StorageInsertResult(heuristic_results, MaxRectsBinPack::RectBestAreaFit);
-    StorageInsertResult(heuristic_results, MaxRectsBinPack::RectBestLongSideFit);
-    StorageInsertResult(heuristic_results, MaxRectsBinPack::RectBestShortSideFit);
-    StorageInsertResult(heuristic_results, MaxRectsBinPack::RectBottomLeftRule);
-    StorageInsertResult(heuristic_results, MaxRectsBinPack::RectContactPointRule);
+    StorageInsertResult(heuristic_results, MaxRectsBinPack::RectBestAreaFit, 0);
+    StorageInsertResult(heuristic_results, MaxRectsBinPack::RectBestAreaFit, 1);
+    StorageInsertResult(heuristic_results, MaxRectsBinPack::RectBestLongSideFit, 0);
+    StorageInsertResult(heuristic_results, MaxRectsBinPack::RectBestLongSideFit, 1);
+    StorageInsertResult(heuristic_results, MaxRectsBinPack::RectBestShortSideFit, 0);
+    StorageInsertResult(heuristic_results, MaxRectsBinPack::RectBestShortSideFit, 1);
+    StorageInsertResult(heuristic_results, MaxRectsBinPack::RectBottomLeftRule, 0);
+    StorageInsertResult(heuristic_results, MaxRectsBinPack::RectBottomLeftRule, 1);
+    StorageInsertResult(heuristic_results, MaxRectsBinPack::RectContactPointRule, 0);
+    StorageInsertResult(heuristic_results, MaxRectsBinPack::RectContactPointRule, 1);
 
     // sort by the number of inserted images.
     std::sort(
@@ -333,6 +338,7 @@ void AtlasPacker::GenerateAtlas()
     HeuristicResult best_method = heuristic_results.at(0);
     cout << "SIZE bin(" << best_method.bin_size.width << ", " << best_method.bin_size.height << ") "
          << "canvas(" << best_method.opacity_size.width << ", " << best_method.opacity_size.height << ")\n";
+
 
     QImage *canvas = new QImage(best_method.opacity_size.width, best_method.opacity_size.height, QImage::Format_ARGB32);
     canvas->fill(0);
@@ -357,7 +363,7 @@ void AtlasPacker::GenerateAtlas()
         }
 
         cout
-                << setw(30) << std::left
+                << setw(50) << std::left
                 << file_utils::GetRelativeToInputDirectoryPath(image_info.filename).toStdString()
                 << "( "
                 << setw(5) << rect.x << setw(5) << rect.y
@@ -376,6 +382,7 @@ void AtlasPacker::GenerateAtlas()
         // remove the image we had processed.
         images.erase(images.begin());
     }
+    cout << '\n';
 
     // storage canvas
     canvases.push_back(canvas);
@@ -388,7 +395,8 @@ void AtlasPacker::GenerateAtlas()
 }
 
 void AtlasPacker::StorageInsertResult(QVector<HeuristicResult> &heuristicResult,
-                                      MaxRectsBinPack::FreeRectChoiceHeuristic method)
+                                      MaxRectsBinPack::FreeRectChoiceHeuristic method,
+                                      int sizeIncreaseMethod)
 {
     // bin's initial size.
     int bin_width = 64;
@@ -396,15 +404,10 @@ void AtlasPacker::StorageInsertResult(QVector<HeuristicResult> &heuristicResult,
 
     HeuristicResult heuristic_result;
 
-    while (true)
+    while (bin_width <= Configuration::maxSize && bin_height <= Configuration::maxSize)
     {
-        // clear before pack.
-        heuristic_result.opacity_size.width  = 0;
-        heuristic_result.opacity_size.height = 0;
-        heuristic_result.images.clear();
-        heuristic_result.rects.clear();
-
         bool can_accommodate = Insert(bin_width, bin_height, heuristic_result, method);
+
         if (can_accommodate)
             break;
 
@@ -416,38 +419,50 @@ void AtlasPacker::StorageInsertResult(QVector<HeuristicResult> &heuristicResult,
                 bin_height *= 2;
         } else
         {
-            float w_ceil_pot = (float) math_utils::CeilPOT(bin_width);
-            float h_ceil_pot = (float) math_utils::CeilPOT(bin_height);
-            // make w_ceil_pot not equal to h_ceil_pot
-            if(w_ceil_pot == h_ceil_pot)
-                w_ceil_pot = std::min((float)Configuration::maxSize, w_ceil_pot * 2);
+            int delta;
+            if(sizeIncreaseMethod == 0)
+            {
+                delta = 32;
+                float w_ceil_pot = (float) math_utils::CeilPOT(bin_width);
+                float h_ceil_pot = (float) math_utils::CeilPOT(bin_height);
+                // make w_ceil_pot not equal to h_ceil_pot
+                if(w_ceil_pot == h_ceil_pot)
+                    w_ceil_pot = std::min((float)Configuration::maxSize, w_ceil_pot * 2);
 
-            float expect_ratio = w_ceil_pot / h_ceil_pot;
-            float now_ratio    = (float) bin_width / (float)bin_height;
-            if (now_ratio < expect_ratio)
-                bin_width += 32;
-            else
-                bin_height += 32;
-        }
+                float expect_ratio = w_ceil_pot / h_ceil_pot;
+                float now_ratio    = (float) bin_width / (float)bin_height;
 
-        // limit bin'size lower than max size.
-        if (bin_width >= Configuration::maxSize && bin_height >= Configuration::maxSize)
-        {
-            heuristic_result.bin_size.width  = Configuration::maxSize;
-            heuristic_result.bin_size.height = Configuration::maxSize;
-            break;
+                if (now_ratio < expect_ratio && (bin_width + delta <= Configuration::maxSize))
+                    bin_width += delta;
+                else
+                    bin_height += delta;
+            }
+            else if(sizeIncreaseMethod == 1)
+            {
+                delta = 16;
+                if (bin_width <= bin_height)
+                    bin_width += delta;
+                else
+                    bin_height += delta;
+            }
         }
-        if(bin_width > Configuration::maxSize)
-            bin_width = Configuration::maxSize;
-        if(bin_height > Configuration::maxSize)
-            bin_height = Configuration::maxSize;
     }
+    bin_width = min(bin_width, Configuration::maxSize);
+    bin_height = min(bin_height, Configuration::maxSize);
 
     heuristicResult.push_back(heuristic_result);
 }
 
 bool AtlasPacker::Insert(int bin_width, int bin_height, HeuristicResult &result, rbp::MaxRectsBinPack::FreeRectChoiceHeuristic method)
 {
+    bool retVal = true;
+
+    // clear before pack.
+    result.opacity_size.width  = 0;
+    result.opacity_size.height = 0;
+    result.images.clear();
+    result.rects.clear();
+
     bin_pack.Init(bin_width + Configuration::spritePadding, bin_height + Configuration::spritePadding);
 
     for(ImageInfo& image_info : images)
@@ -460,7 +475,8 @@ bool AtlasPacker::Insert(int bin_width, int bin_height, HeuristicResult &result,
 
         if(rect.width == 0)
         {
-            return false;
+            retVal = false;
+            break;
         }
 
         // after we retrieve bounds in bin, we subtract bounds'size from shape padding.
@@ -479,7 +495,7 @@ bool AtlasPacker::Insert(int bin_width, int bin_height, HeuristicResult &result,
     result.occupancy = bin_pack.Occupancy();
     result.method = method;
 
-    return true;
+    return retVal;
 }
 
 bool AtlasPacker::IsEmpty()

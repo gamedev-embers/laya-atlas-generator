@@ -33,6 +33,8 @@ void JsonExport::AddImageDescription(const ImageInfo &image_info)
     frame_object.insert("y", image_info.frame.y);
     frame_object.insert("w", image_info.frame.width);
     frame_object.insert("h", image_info.frame.height);
+    // idx居然在frame里？？
+    frame_object.insert("idx", image_info.image_index);
 
     QJsonObject sprite_source_size_object;
     sprite_source_size_object.insert("x", image_info.sprite_source_size.x);
@@ -50,7 +52,6 @@ void JsonExport::AddImageDescription(const ImageInfo &image_info)
     sprite_object.insert("trimmed", image_info.trimmed);
     sprite_object.insert("spriteSourceSize", sprite_source_size_object);
     sprite_object.insert("sourceSize", source_size_object);
-    sprite_object.insert("idx", image_info.image_index);
 
     frames_object.insert(QFileInfo(image_info.filename).fileName(), sprite_object);
 }

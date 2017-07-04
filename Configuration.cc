@@ -470,7 +470,7 @@ void Configuration::PrintConfiguration()
         cout << "    " << fileInfo.absoluteFilePath().toStdString() << "\n";
     cout
         << "\n"
-        << "Include IMAGES\n";
+        << "INCLUDE IMAGES\n";
     for(const QFileInfo& fileInfo : includeImages)
         cout << "    " << fileInfo.absoluteFilePath().toStdString() << "\n";
     cout << "\n";
