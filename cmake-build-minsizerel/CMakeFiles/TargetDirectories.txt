@@ -1,4 +1,0 @@
-/home/survivor/Documents/cpp/atlas-generator/cmake-build-minsizerel/CMakeFiles/rebuild_cache.dir
-/home/survivor/Documents/cpp/atlas-generator/cmake-build-minsizerel/CMakeFiles/edit_cache.dir
-/home/survivor/Documents/cpp/atlas-generator/cmake-build-minsizerel/CMakeFiles/atlas_generator.dir
-/home/survivor/Documents/cpp/atlas-generator/cmake-build-minsizerel/CMakeFiles/atlas_generator_automoc.dir
