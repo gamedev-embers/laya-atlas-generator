@@ -20,7 +20,7 @@ vector<QDir> directories;
 
 void ProcessFile(QFileInfo &file_info, AtlasPacker &atlas_packer, vector<QDir> &directories);
 void GenerateAtlas(AtlasPacker& atlas_packer, const QDir &dir);
-void ProcessRegularFile(QString filename, AtlasPacker &atlas_packer);
+void ProcessRegularFile(QString filePath, AtlasPacker &atlas_packer);
 
 // 检查资源（输入目录下的所有文件）是否被修改过（自上次打包）。
 // 在资源已修改的情况下，将在调用处继续执行程序。
@@ -80,6 +80,8 @@ void CheckResourceModification()
 void PackDirectories()
 {
     QDir dir = directories.front();
+    cout << "DIRECTORY " << dir.path().toStdString() << '\n';
+
     directories.erase(directories.begin());
 
     // 检查目录是否被用户排除
@@ -126,46 +128,45 @@ void ProcessFile(QFileInfo &file_info, AtlasPacker &atlas_packer, vector<QDir> &
         ProcessRegularFile(file_path, atlas_packer);
 }
 
-void ProcessRegularFile(QString filename, AtlasPacker &atlas_packer)
+void ProcessRegularFile(QString filePath, AtlasPacker &atlas_packer)
 {
+    std::string fileName = QFileInfo(filePath).fileName().toStdString();
     // 检查文件是否被用户排除
-    if (Configuration::IsExclude(QFileInfo(filename)))
+    if (Configuration::IsExclude(QFileInfo(filePath)))
     {
-        file_utils::CopyToResourceDirectory(filename);
-        cout << "EXCLUDE " << filename.toStdString() << "\n";
+        file_utils::CopyToResourceDirectory(filePath);
+        cout << "EXCLUDE " << fileName << "\n";
         return;
     }
 
-    QImage *image = new QImage(filename);
+    QImage *image = new QImage(filePath);
 
     // is not a image.
     if (image->isNull())
     {
-        file_utils::CopyToResourceDirectory(filename);
-        cout << "NOT IMAGE " << filename.toStdString() << "\n";
+        file_utils::CopyToResourceDirectory(filePath);
+        cout << "NOT IMAGE " << fileName << "\n";
     }
     else
     {
         // image's size is overflow.
         if(image->width() > Configuration::spriteSize || image->height() > Configuration::spriteSize)
         {
-            if(Configuration::IsInclude(QFileInfo(filename)))
+            if(Configuration::IsInclude(QFileInfo(filePath)))
             {
-                cout << "INCLUDE " << filename.toStdString() << "\n";
+                cout << "INCLUDE " << fileName << "\n";
             }
             else
             {
-                file_utils::CopyToResourceDirectory(filename);
-                cout << "OVERFLOW " << filename.toStdString() << "\n";
+                file_utils::CopyToResourceDirectory(filePath);
+                cout << "OVERFLOW " << fileName << "\n";
                 return;
             }
         }
 
         // print information. We are loading image now.
-        cout << "LOAD "
-             << file_utils::GetRelativeToInputDirectoryPath(filename).toStdString()
-             << "\n";
-        atlas_packer.AddImage(filename, image);
+        cout << "LOAD "<< fileName << "\n";
+        atlas_packer.AddImage(filePath, image);
     }
 }
 

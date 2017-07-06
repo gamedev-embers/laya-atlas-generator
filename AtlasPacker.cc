@@ -194,8 +194,13 @@ void AtlasPacker::ExportAtlas(QString relative_path)
         return;
 
     // create directories
-    QDir out_dir(Configuration::outputDirectory.filePath(relative_path));
-    out_dir.mkpath("..");
+    QDir out_dir(Configuration::outputDirectory);
+    QStringList pathParts = relative_path.split(QDir::separator());
+    for(int i = 0 ; i < pathParts.length() - 1; ++i)
+    {
+        out_dir.mkdir(pathParts.at(i));
+        out_dir.cd(pathParts.at(i));
+    }
 
     QString images;
 
@@ -362,12 +367,11 @@ void AtlasPacker::GenerateAtlas()
         }
 
         cout
-                << setw(50) << std::left
-                << file_utils::GetRelativeToInputDirectoryPath(image_info.filename).toStdString()
                 << "( "
                 << setw(5) << rect.x << setw(5) << rect.y
                 << setw(5) << rect.width << setw(4) << rect.height
-                << ")"
+                << ")    "
+                << QFileInfo(image_info.filename).fileName().toStdString()
                 << "\n";
 
         image_info.frame.x = rect.x + Configuration::extrude;
