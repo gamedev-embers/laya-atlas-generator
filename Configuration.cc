@@ -166,8 +166,8 @@ void Configuration::ParseCommandLine(const QCoreApplication &application)
 
     if(commandLineParser.positionalArguments().isEmpty())
     {
-        cerr << "wrong input. See --help." << std::endl;
-        exit(EXIT_FAILURE);
+        cerr << commandLineParser.helpText().toStdString() << std::endl;
+        exit(EXIT_SUCCESS);
     }
 
     input = QFileInfo(commandLineParser.positionalArguments().at(0));
@@ -197,6 +197,11 @@ void Configuration::ParseCommandLine(const QCoreApplication &application)
         } else
         {
             ReadConfigurationFile(input.filePath());
+            if(!inputDirectory.exists())
+            {
+                cout << inputDirectory.path().toStdString() << "\" not found.\n";
+                exit(EXIT_FAILURE);
+            }
 
             // outputOption & resourceOption can be overwrite by cl args.
             if(commandLineParser.isSet(outputOption))
@@ -214,7 +219,7 @@ void Configuration::ParseCommandLine(const QCoreApplication &application)
         PrintConfiguration();
     } else
     {
-        cout << "input \"" << input.filePath().toStdString() << "\" not found.\n";
+        cout << input.filePath().toStdString() << "\" not found.\n";
         exit(EXIT_FAILURE);
     }
 }

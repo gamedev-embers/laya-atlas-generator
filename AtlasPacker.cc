@@ -1,7 +1,6 @@
 //
 // Created by wengxiang on 2017/1/30.
 //
-
 #include <iostream>
 #include <functional>
 #include <cmath>
@@ -207,7 +206,7 @@ void AtlasPacker::ExportAtlas(QString relative_path)
 
         if(i > 0)
             images += ',';
-        images += file_name;
+        images += QFileInfo(file_name).fileName();
 
         bool need_free = false;
         QImage* canvas = canvases[i];
