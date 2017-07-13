@@ -193,7 +193,7 @@ void AtlasPacker::ExportAtlas(QString relative_path)
     if(canvases.empty())
         return;
 
-    file_utils::mkdirs(Configuration::outputDirectory.filePath(relative_path));
+    file_utils::mkdirs(Configuration::outputDirectory.path(), relative_path);
 
     QString images;
 
@@ -287,7 +287,7 @@ void AtlasPacker::PackBin()
         }
 
         // extrude if needed.
-        if (Configuration::extrude)
+        if (Configuration::extrude && Configuration::IsExtrude(QFileInfo(image_info.filename)))
         {
             image = ImageExtrude(image, image_info);
             delete image_info.image;

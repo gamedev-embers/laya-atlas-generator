@@ -39,14 +39,16 @@ public:
 
     // other properties
     static bool force;
+    static bool dataCompact;
     static QVector<QFileInfo> excludeImages;
     static QVector<QFileInfo> includeImages;
+    static QVector<QFileInfo> extrudeImages;
 
     // static function declarations
     static void ParseCommandLine(const QCoreApplication &application);
     static bool IsExclude(const QFileInfo &fileInfo);
-
-    static bool IsInclude(QFileInfo fileInfo);
+    static bool IsInclude(const QFileInfo &fileInfo);
+    static bool IsExtrude(const QFileInfo &fileInfo);
 
 private:
     static void ReadConfigurationFile(QString configFilePath);

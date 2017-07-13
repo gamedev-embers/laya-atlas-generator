@@ -8,7 +8,6 @@
 
 #include <fstream>
 #include <iostream>
-#include <direct.h>
 
 #include "Utils.h"
 #include "Configuration.h"
@@ -74,11 +73,11 @@ QString file_utils::GetRelativeToInputDirectoryPath(QString path)
     return Configuration::inputDirectory.relativeFilePath(path);
 }
 
-void file_utils::mkdirs(QString path)
+void file_utils::mkdirs(QString root, QString relative)
 {
-    QStringList parts = path.split(QRegularExpression("/|\\\\"), QString::SkipEmptyParts);
-    QDir dir(parts[0]);
-    for(int i = 1; i < parts.length(); ++i)
+    QDir dir(root);
+    QStringList parts = relative.split(QRegularExpression("/|\\\\"), QString::SkipEmptyParts);
+    for(int i = 0; i < parts.length(); ++i)
     {
         dir.mkdir(parts[i]);
         dir.cd(parts[i]);

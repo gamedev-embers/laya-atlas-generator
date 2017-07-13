@@ -27,28 +27,30 @@ using std::cerr;
 // directories
 QFileInfo Configuration::input;
 QDir Configuration::inputDirectory,
-     Configuration::outputDirectory,
-     Configuration::resourceDirectory;
+        Configuration::outputDirectory,
+        Configuration::resourceDirectory;
 
 // sprite properties
 bool Configuration::cropAlpha,
-     Configuration::rotation;
+        Configuration::rotation;
 int Configuration::spriteSize,
-    Configuration::spritePadding,
-    Configuration::extrude;
+        Configuration::spritePadding,
+        Configuration::extrude;
 
 // texture properties
 QImage::Format Configuration::pixelFormat;
 QString Configuration::textureFormat,
         Configuration::pixelFormatString;
 int Configuration::textureQuality,
-    Configuration::maxSize;
+        Configuration::maxSize;
 bool Configuration::POT;
 
 // other properties
 bool Configuration::force;
+bool Configuration::dataCompact;
 QVector<QFileInfo> Configuration::excludeImages;
 QVector<QFileInfo> Configuration::includeImages;
+QVector<QFileInfo> Configuration::extrudeImages;
 
 // static function definitions
 void Configuration::ParseCommandLine(const QCoreApplication &application)
@@ -90,7 +92,12 @@ void Configuration::ParseCommandLine(const QCoreApplication &application)
     );
     QCommandLineOption excludeImagesOption(
             QStringList() << "x" << "exclude",
-            "The picture in exclude list will not packed, split by ','.",
+            "The picture in exclude list will not be packed, split by ','.",
+            "file1,file2..."
+    );
+    QCommandLineOption extrudeImagesOption(
+            QStringList() << "X" << "extrude",
+            "The picture in extrude list will be extruded, split by ','.",
             "file1,file2..."
     );
     QCommandLineOption spritePaddingOption(
@@ -133,6 +140,10 @@ void Configuration::ParseCommandLine(const QCoreApplication &application)
             QStringList() << "init",
             "Generate a configuration file."
     );
+    QCommandLineOption dataCompactOption(
+            QStringList() << "dataCompact",
+            "If the output data in indented format or compact format."
+    );
 
     // parse options
     QCommandLineParser commandLineParser;
@@ -153,6 +164,7 @@ void Configuration::ParseCommandLine(const QCoreApplication &application)
     commandLineParser.addOption(textureQualityOption);
     commandLineParser.addOption(textureFormatOption);
     commandLineParser.addOption(initOption);
+    commandLineParser.addOption(dataCompactOption);
 
     commandLineParser.addHelpOption();
     commandLineParser.addVersionOption();
@@ -164,7 +176,7 @@ void Configuration::ParseCommandLine(const QCoreApplication &application)
     // process user input
     ProcessInitDirective(commandLineParser.isSet(initOption));
 
-    if(commandLineParser.positionalArguments().isEmpty())
+    if (commandLineParser.positionalArguments().isEmpty())
     {
         cerr << commandLineParser.helpText().toStdString() << std::endl;
         exit(EXIT_SUCCESS);
@@ -175,40 +187,42 @@ void Configuration::ParseCommandLine(const QCoreApplication &application)
 
     if (input.exists())
     {
-        if(input.isDir())
+        if (input.isDir())
         {
-            inputDirectory    = QDir(input.filePath());
-            extrude           = commandLineParser.value(extrudeOption).toInt();
-            maxSize           = commandLineParser.value(maxSizeOption).toInt();
-            spriteSize        = commandLineParser.value(spriteSizeOption).toInt();
-            spritePadding     = commandLineParser.value(spritePaddingOption).toInt();
-            textureQuality    = commandLineParser.value(textureQualityOption).toInt();
-            textureFormat     = commandLineParser.value(textureFormatOption);
-            POT               = commandLineParser.isSet(POTOption);
-            cropAlpha         = commandLineParser.isSet(cropAlphaOption);
-            rotation          = commandLineParser.isSet(rotateOption);
-            force             = commandLineParser.isSet(force_option);
+            inputDirectory = QDir(input.filePath());
+            extrude = commandLineParser.value(extrudeOption).toInt();
+            maxSize = commandLineParser.value(maxSizeOption).toInt();
+            spriteSize = commandLineParser.value(spriteSizeOption).toInt();
+            spritePadding = commandLineParser.value(spritePaddingOption).toInt();
+            textureQuality = commandLineParser.value(textureQualityOption).toInt();
+            textureFormat = commandLineParser.value(textureFormatOption);
+            POT = commandLineParser.isSet(POTOption);
+            cropAlpha = commandLineParser.isSet(cropAlphaOption);
+            rotation = commandLineParser.isSet(rotateOption);
+            force = commandLineParser.isSet(force_option);
+            dataCompact = commandLineParser.isSet(dataCompactOption);
 
             SetupPixelFormat(commandLineParser.value(pixelFormatOption));
             SetUpFileList(commandLineParser.value(excludeImagesOption), excludeImages);
             SetUpFileList(commandLineParser.value(includeImagesOption), includeImages);
+            SetUpFileList(commandLineParser.value(extrudeImagesOption), extrudeImages);
             SetupOutputDirectory(commandLineParser.value(outputOption));
             SetupResourceDirectory(commandLineParser.value(resourceOption));
         } else
         {
             ReadConfigurationFile(input.filePath());
-            if(!inputDirectory.exists())
+            if (!inputDirectory.exists())
             {
                 cout << inputDirectory.path().toStdString() << "\" not found.\n";
                 exit(EXIT_FAILURE);
             }
 
             // outputOption & resourceOption can be overwrite by cl args.
-            if(commandLineParser.isSet(outputOption))
+            if (commandLineParser.isSet(outputOption))
             {
                 SetupOutputDirectory(commandLineParser.value(outputOption));
             }
-            if(commandLineParser.isSet(resourceOption))
+            if (commandLineParser.isSet(resourceOption))
             {
                 SetupResourceDirectory(commandLineParser.value(resourceOption));
             }
@@ -228,7 +242,7 @@ void Configuration::ReadConfigurationFile(QString configFilePath)
 {
     QFile configFile(configFilePath);
     configFile.open(QFile::ReadOnly | QFile::Text);
-    if(!configFile.isOpen())
+    if (!configFile.isOpen())
     {
         cerr << "Cannot open " << configFilePath.toStdString() << " for reading" << std::endl;
         exit(EXIT_FAILURE);
@@ -243,36 +257,38 @@ void Configuration::ReadConfigurationFile(QString configFilePath)
     QJsonDocument config_document = QJsonDocument::fromJson(content, &error);
 
     // process parser error
-    if(error.error != QJsonParseError::ParseError::NoError)
+    if (error.error != QJsonParseError::ParseError::NoError)
     {
         cerr << "JSON Parser Error: " << error.errorString().toStdString() << std::endl;
         exit(EXIT_FAILURE);
     }
 
     // retrieve data
-    QJsonObject rootObject   = config_document.object();
-    QJsonObject atlasObject  = rootObject.value("atlas").toObject();
+    QJsonObject rootObject = config_document.object();
+    QJsonObject atlasObject = rootObject.value("atlas").toObject();
     QJsonObject spriteObject = rootObject.value("sprite").toObject();
-    QJsonArray excludeArray  = rootObject.value("excludeList").toArray();
-    QJsonArray includeArray  = rootObject.value("includeList").toArray();
-    POT                      = atlasObject.value("POT").toBool();
-    textureQuality           = atlasObject.value("quality").toInt();
-    maxSize                  = atlasObject.value("size").toInt();
-    textureFormat            = atlasObject.value("textureFormat").toString();
-    force                    = rootObject.value("force").toBool();
-    inputDirectory           = rootObject.value("inputDir").toString();
-    outputDirectory          = rootObject.value("outputDir").toString();
-    resourceDirectory        = rootObject.value("resDir").toString();
-    cropAlpha                = spriteObject.value("cropAlpha").toBool();
-    extrude                  = spriteObject.value("extrude").toInt();
-    spritePadding            = spriteObject.value("padding").toInt();
-    rotation                 = spriteObject.value("rotation").toBool();
-    spriteSize               = spriteObject.value("size").toInt();
+    QJsonArray excludeArray = rootObject.value("excludeList").toArray();
+    QJsonArray includeArray = rootObject.value("includeList").toArray();
+    POT = atlasObject.value("POT").toBool();
+    textureQuality = atlasObject.value("quality").toInt();
+    maxSize = atlasObject.value("size").toInt();
+    textureFormat = atlasObject.value("textureFormat").toString();
+    force = rootObject.value("force").toBool();
+    dataCompact = rootObject.value("dataCompact").toBool();
+    inputDirectory = rootObject.value("inputDir").toString();
+    outputDirectory = rootObject.value("outputDir").toString();
+    resourceDirectory = rootObject.value("resDir").toString();
+    cropAlpha = spriteObject.value("cropAlpha").toBool();
+    extrude = spriteObject.value("extrude").toInt();
+    spritePadding = spriteObject.value("padding").toInt();
+    rotation = spriteObject.value("rotation").toBool();
+    spriteSize = spriteObject.value("size").toInt();
 
     inputDirectory.makeAbsolute();
 
     SetUpFileList(rootObject.value("excludeList").toArray(), excludeImages);
     SetUpFileList(rootObject.value("includeList").toArray(), includeImages);
+    SetUpFileList(rootObject.value("extrudeList").toArray(), extrudeImages);
     SetupPixelFormat(atlasObject.value("pixelFormat").toString());
     SetupOutputDirectory(rootObject.value("outputDir").toString());
     SetupResourceDirectory(rootObject.value("resDir").toString());
@@ -300,9 +316,9 @@ void Configuration::SetupResourceDirectory(const QString &value)
     resourceDirectory.makeAbsolute();
 }
 
-void ::Configuration::SetUpFileList(const QString &value, QVector<QFileInfo>& container)
+void ::Configuration::SetUpFileList(const QString &value, QVector<QFileInfo> &container)
 {
-    if(value.isEmpty())
+    if (value.isEmpty())
     {
         return;
     }
@@ -322,13 +338,13 @@ void ::Configuration::SetUpFileList(const QString &value, QVector<QFileInfo>& co
     cout << "\n";
 }
 
-void Configuration::SetUpFileList(const QJsonArray &list, QVector<QFileInfo>& container)
+void Configuration::SetUpFileList(const QJsonArray &list, QVector<QFileInfo> &container)
 {
-    for(auto pos = list.constBegin(); pos != list.constEnd(); ++pos)
+    for (auto pos = list.constBegin(); pos != list.constEnd(); ++pos)
     {
         QString path((*pos).toString());
         QFileInfo fileInfo(path);
-        if(fileInfo.isRelative())
+        if (fileInfo.isRelative())
             fileInfo.setFile(inputDirectory.filePath(path));
         container.push_back(fileInfo);
     }
@@ -340,10 +356,16 @@ bool ::Configuration::IsExclude(const QFileInfo &fileInfo)
     return find_index != excludeImages.cend();
 }
 
-bool Configuration::IsInclude(QFileInfo fileInfo)
+bool Configuration::IsInclude(const QFileInfo &fileInfo)
 {
     auto find_index = std::find(includeImages.cbegin(), includeImages.cend(), fileInfo);
     return find_index != includeImages.cend();
+}
+
+bool ::Configuration::IsExtrude(const QFileInfo &fileInfo)
+{
+    auto find_index = std::find(extrudeImages.cbegin(), extrudeImages.cend(), fileInfo);
+    return find_index != extrudeImages.cend();
 }
 
 void Configuration::SetupPixelFormat(QString pixelFormatString)
@@ -410,8 +432,10 @@ QString Configuration::GetDefaultConfigContent()
     rootObject.insert("outputDir", "");
     rootObject.insert("resDir", "");
     rootObject.insert("force", true);
+    rootObject.insert("dataCompact", false);
     rootObject.insert("includeList", QJsonArray());
     rootObject.insert("excludeList", QJsonArray());
+    rootObject.insert("extrudeList", QJsonArray());
 
     QJsonObject atlasObject;
     atlasObject.insert("size", 2048);
@@ -435,7 +459,7 @@ QString Configuration::GetDefaultConfigContent()
 
 void Configuration::ProcessInitDirective(bool is_init)
 {
-    if(!is_init)
+    if (!is_init)
         return;
 
     QFile out_file("atlasConfig");
@@ -457,26 +481,32 @@ void Configuration::ProcessInitDirective(bool is_init)
 void Configuration::PrintConfiguration()
 {
     cout
-         << std::setw(25) << std::left << "input directory" << inputDirectory.path().toStdString() << "\n"
-         << std::setw(25) << std::left << "output directory" << outputDirectory.path().toStdString() << "\n"
-         << std::setw(25) << std::left << "resource directory" << resourceDirectory.path().toStdString() << "\n"
-         << std::setw(25) << std::left << "crop alpha" << std::boolalpha << cropAlpha << "\n"
-         << std::setw(25) << std::left << "allow rotation" << rotation << "\n"
-         << std::setw(25) << std::left << "max sprite size" << spriteSize << "\n"
-         << std::setw(25) << std::left << "max texture size" << maxSize <<"\n"
-         << std::setw(25) << std::left << "sprite padding" << spritePadding << "\n"
-         << std::setw(25) << std::left << "extrude" << extrude << "\n"
-         << std::setw(25) << std::left << "pixel format" << pixelFormatString.toStdString() << "\n"
-         << std::setw(25) << std::left << "texture format" << textureFormat.toStdString() << "\n"
-         << std::setw(25) << std::left << "texture quality" << textureQuality << "\n"
-         << std::setw(25) << std::left << "POT" << POT << "\n\n"
-         << "EXCLUDE IMAGES\n";
-    for(const QFileInfo& fileInfo : excludeImages)
+            << std::setw(25) << std::left << "input directory" << inputDirectory.path().toStdString() << "\n"
+            << std::setw(25) << std::left << "output directory" << outputDirectory.path().toStdString() << "\n"
+            << std::setw(25) << std::left << "resource directory" << resourceDirectory.path().toStdString() << "\n"
+            << std::setw(25) << std::left << "crop alpha" << std::boolalpha << cropAlpha << "\n"
+            << std::setw(25) << std::left << "allow rotation" << rotation << "\n"
+            << std::setw(25) << std::left << "max sprite size" << spriteSize << "\n"
+            << std::setw(25) << std::left << "max texture size" << maxSize << "\n"
+            << std::setw(25) << std::left << "sprite padding" << spritePadding << "\n"
+            << std::setw(25) << std::left << "extrude" << extrude << "\n"
+            << std::setw(25) << std::left << "pixel format" << pixelFormatString.toStdString() << "\n"
+            << std::setw(25) << std::left << "texture format" << textureFormat.toStdString() << "\n"
+            << std::setw(25) << std::left << "texture quality" << textureQuality << "\n"
+            << std::setw(25) << std::left << "data compact" << std::boolalpha << dataCompact << "\n"
+            << std::setw(25) << std::left << "POT" << POT << "\n\n"
+            << "EXCLUDE IMAGES\n";
+    for (const QFileInfo &fileInfo : excludeImages)
         cout << "    " << fileInfo.absoluteFilePath().toStdString() << "\n";
     cout
-        << "\n"
-        << "INCLUDE IMAGES\n";
-    for(const QFileInfo& fileInfo : includeImages)
+            << "\n"
+            << "INCLUDE IMAGES\n";
+    for (const QFileInfo &fileInfo : includeImages)
+        cout << "    " << fileInfo.absoluteFilePath().toStdString() << "\n";
+    cout
+            << "\n"
+            << "EXTRUDE IMAGES\n";
+    for (const QFileInfo &fileInfo : extrudeImages)
         cout << "    " << fileInfo.absoluteFilePath().toStdString() << "\n";
     cout << "\n";
 }

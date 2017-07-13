@@ -9,6 +9,7 @@
 #include "AtlasPacker.h"
 #include "Utils.h"
 #include "JsonExport.h"
+#include "Configuration.h"
 
 JsonExport::JsonExport():
     json_document(),
@@ -99,7 +100,7 @@ void JsonExport::Export(const QString &file_path)
     }
 
     QTextStream out_stream(&out_file);
-    out_stream << json_document.toJson();
+    out_stream << json_document.toJson(Configuration::dataCompact ? QJsonDocument::Compact : QJsonDocument::Indented);
     out_stream.flush();
 
     out_file.close();
