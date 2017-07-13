@@ -94,7 +94,7 @@ void JsonExport::Export(const QString &file_path)
 
     if(!out_file.isOpen())
     {
-        std::cerr << "Can not open " << file_path.toStdString();
+        std::cerr << "Can not open " << file_path.toStdString() << '\n';
         return;
     }
 

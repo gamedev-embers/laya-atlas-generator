@@ -4,9 +4,11 @@
 #include <QtCore/QString>
 #include <QtCore/QFileInfo>
 #include <QtCore/QDir>
+#include <QRegularExpression>
 
 #include <fstream>
 #include <iostream>
+#include <direct.h>
 
 #include "Utils.h"
 #include "Configuration.h"
@@ -20,33 +22,41 @@ using std::endl;
 
 bool file_utils::Copy(const QString &from, const QString &to)
 {
-    ifstream in;
-    ofstream out;
-    in.open(from.toStdString(), ios::binary);
-
-    if(in.fail())
+    if(QFileInfo(from).isDir())
     {
-       cerr<<"Error: Fail to open the source file."<<endl;
-       in.close();
-       out.close();
-       return false;
-    }
+        QDir fromDir(from), toDir(to);
 
-    out.open(to.toStdString(), ios::binary);
-    if(out.fail())
-    {
-       cerr<<"Error: Fail to create the new file."<<endl;
-       out.close();
-       in.close();
-       return false;
+        QFileInfoList fileList = fromDir.entryInfoList(QDir::Files | QDir::Dirs | QDir::NoDotAndDotDot);
+        for(const QFileInfo &file : fileList)
+        {
+            QString relative = fromDir.relativeFilePath(file.filePath());
+            Copy(file.filePath(), toDir.filePath(relative));
+        }
     }
     else
     {
-       out<<in.rdbuf();
-       out.close();
-       in.close();
-       return true;
+        FILE *in, *out;
+        in = fopen(from.toStdString().c_str(), "rb");
+        out = fopen(to.toStdString().c_str(), "wb");
+        if(in && out)
+        {
+            void *buf;
+            while(!feof(in))
+            {
+                fread(&buf, 1, 1, in);
+                fwrite(&buf, 1, 1, out);
+            }
+            fclose(in);
+            fclose(out);
+            return true;
+        }
+        else
+        {
+            return false;
+        }
     }
+
+    return false;
 }
 
 void ::file_utils::CopyToResourceDirectory(const QString &path)
@@ -62,6 +72,17 @@ void ::file_utils::CopyToResourceDirectory(const QString &path)
 QString file_utils::GetRelativeToInputDirectoryPath(QString path)
 {
     return Configuration::inputDirectory.relativeFilePath(path);
+}
+
+void file_utils::mkdirs(QString path)
+{
+    QStringList parts = path.split(QRegularExpression("/|\\\\"), QString::SkipEmptyParts);
+    QDir dir(parts[0]);
+    for(int i = 1; i < parts.length(); ++i)
+    {
+        dir.mkdir(parts[i]);
+        dir.cd(parts[i]);
+    }
 }
 
 int ::math_utils::CeilPOT(int value)

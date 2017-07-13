@@ -193,14 +193,7 @@ void AtlasPacker::ExportAtlas(QString relative_path)
     if(canvases.empty())
         return;
 
-    // create directories
-    QDir out_dir(Configuration::outputDirectory);
-    QStringList pathParts = relative_path.split(QDir::separator());
-    for(int i = 0 ; i < pathParts.length() - 1; ++i)
-    {
-        out_dir.mkdir(pathParts.at(i));
-        out_dir.cd(pathParts.at(i));
-    }
+    file_utils::mkdirs(Configuration::outputDirectory.filePath(relative_path));
 
     QString images;
 
