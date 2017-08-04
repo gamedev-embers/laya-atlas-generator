@@ -8,6 +8,7 @@
 
 #include <fstream>
 #include <iostream>
+#include <io.h>
 
 #include "Utils.h"
 #include "Configuration.h"
@@ -23,6 +24,7 @@ bool file_utils::Copy(const QString &from, const QString &to)
 {
     if(QFileInfo(from).isDir())
     {
+        mkdirs(to.toStdString());
         QDir fromDir(from), toDir(to);
 
         QFileInfoList fileList = fromDir.entryInfoList(QDir::Files | QDir::Dirs | QDir::NoDotAndDotDot);
@@ -60,6 +62,8 @@ bool file_utils::Copy(const QString &from, const QString &to)
 
 void ::file_utils::CopyToResourceDirectory(const QString &path)
 {
+    if(Configuration::noCopyResources) return;
+
     QString relative_path = Configuration::inputDirectory.relativeFilePath(path);
 
     Configuration::resourceDirectory.mkpath(QFileInfo(relative_path).dir().path());
@@ -73,15 +77,30 @@ QString file_utils::GetRelativeToInputDirectoryPath(QString path)
     return Configuration::inputDirectory.relativeFilePath(path);
 }
 
-void file_utils::mkdirs(QString root, QString relative)
+bool file_utils::mkdirs(std::string path)
 {
-    QDir dir(root);
-    QStringList parts = relative.split(QRegularExpression("/|\\\\"), QString::SkipEmptyParts);
-    for(int i = 0; i < parts.length(); ++i)
+    using namespace  std;
+
+    vector<string> folders;
+    while(access(path.c_str(), 0) == -1)
     {
-        dir.mkdir(parts[i]);
-        dir.cd(parts[i]);
+        auto pos = path.find_last_of("\\/");
+
+        if(pos == string::npos)
+            break;
+
+        folders.push_back(path.substr(pos+1));
+        path = path.substr(0, pos);
     }
+
+    bool ret = false;
+    while(folders.size())
+    {
+        path += '/' + folders.back();
+        folders.pop_back();
+        ret = mkdir(path.c_str()) == 0;
+    }
+    return ret;
 }
 
 int ::math_utils::CeilPOT(int value)

@@ -193,7 +193,7 @@ void AtlasPacker::ExportAtlas(QString relative_path)
     if(canvases.empty())
         return;
 
-    file_utils::mkdirs(Configuration::outputDirectory.path(), relative_path);
+    file_utils::mkdirs(QFileInfo(Configuration::outputDirectory.filePath(relative_path)).path().toStdString());
 
     QString images;
 
@@ -219,7 +219,7 @@ void AtlasPacker::ExportAtlas(QString relative_path)
         cout << "SAVE " << file_path.toStdString() << "\n";
     }
 
-    QString data_export_file = Configuration::outputDirectory.filePath(relative_path + ".atlas");
+    QString data_export_file = Configuration::outputDirectory.filePath(relative_path + (Configuration::dataFormat.isEmpty() ? "" : "." + Configuration::dataFormat));
     data_export->SetMetaImages(images);
     data_export->SetMetaPrefix(relative_path + "/");
     data_export->Export(data_export_file);
@@ -367,10 +367,18 @@ void AtlasPacker::GenerateAtlas()
                 << QFileInfo(image_info.filename).fileName().toStdString()
                 << "\n";
 
-        image_info.frame.x = rect.x + Configuration::extrude;
-        image_info.frame.y = rect.y + Configuration::extrude;
-        image_info.frame.width = rect.width - Configuration::extrude * 2;
-        image_info.frame.height = rect.height - Configuration::extrude * 2;
+        image_info.frame.x = rect.x;
+        image_info.frame.y = rect.y;
+        image_info.frame.width = rect.width;
+        image_info.frame.height = rect.height;
+
+        if(Configuration::IsExtrude(QFileInfo(image_info.filename)))
+        {
+            image_info.frame.x += Configuration::extrude;
+            image_info.frame.y += Configuration::extrude;
+            image_info.frame.width -= Configuration::extrude * 2;
+            image_info.frame.height -= Configuration::extrude * 2;
+        }
 
         data_export->AddImageDescription(image_info);
         ImageDrawImage(*canvas, *(image_info.image), rect.x, rect.y);

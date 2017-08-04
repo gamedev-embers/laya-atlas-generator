@@ -29,6 +29,7 @@ QFileInfo Configuration::input;
 QDir Configuration::inputDirectory,
         Configuration::outputDirectory,
         Configuration::resourceDirectory;
+bool Configuration::noCopyResources;
 
 // sprite properties
 bool Configuration::cropAlpha,
@@ -48,6 +49,7 @@ bool Configuration::POT;
 // other properties
 bool Configuration::force;
 bool Configuration::dataCompact;
+QString Configuration::dataFormat;
 QVector<QFileInfo> Configuration::excludeImages;
 QVector<QFileInfo> Configuration::includeImages;
 QVector<QFileInfo> Configuration::extrudeImages;
@@ -106,7 +108,7 @@ void Configuration::ParseCommandLine(const QCoreApplication &application)
             "value",
             "1"
     );
-    QCommandLineOption force_option(
+    QCommandLineOption forceOption(
             QStringList() << "f" << "force",
             "If true, then publish even if picture never be modified.");
     QCommandLineOption POTOption(
@@ -144,6 +146,12 @@ void Configuration::ParseCommandLine(const QCoreApplication &application)
             QStringList() << "dataCompact",
             "If the output data in indented format or compact format."
     );
+    QCommandLineOption dataFormatOption(
+            QStringList() << "dataFormat",
+            "Extension of data file.",
+            "extension",
+            "atlas"
+    );
 
     // parse options
     QCommandLineParser commandLineParser;
@@ -156,7 +164,7 @@ void Configuration::ParseCommandLine(const QCoreApplication &application)
     commandLineParser.addOption(includeImagesOption);
     commandLineParser.addOption(excludeImagesOption);
     commandLineParser.addOption(spritePaddingOption);
-    commandLineParser.addOption(force_option);
+    commandLineParser.addOption(forceOption);
     commandLineParser.addOption(POTOption);
     commandLineParser.addOption(cropAlphaOption);
     commandLineParser.addOption(rotateOption);
@@ -165,6 +173,7 @@ void Configuration::ParseCommandLine(const QCoreApplication &application)
     commandLineParser.addOption(textureFormatOption);
     commandLineParser.addOption(initOption);
     commandLineParser.addOption(dataCompactOption);
+    commandLineParser.addOption(dataFormatOption);
 
     commandLineParser.addHelpOption();
     commandLineParser.addVersionOption();
@@ -199,8 +208,9 @@ void Configuration::ParseCommandLine(const QCoreApplication &application)
             POT = commandLineParser.isSet(POTOption);
             cropAlpha = commandLineParser.isSet(cropAlphaOption);
             rotation = commandLineParser.isSet(rotateOption);
-            force = commandLineParser.isSet(force_option);
+            force = commandLineParser.isSet(forceOption);
             dataCompact = commandLineParser.isSet(dataCompactOption);
+            dataFormat = commandLineParser.value(dataFormatOption);
 
             SetupPixelFormat(commandLineParser.value(pixelFormatOption));
             SetUpFileList(commandLineParser.value(excludeImagesOption), excludeImages);
@@ -267,6 +277,7 @@ void Configuration::ReadConfigurationFile(QString configFilePath)
     QJsonObject rootObject = config_document.object();
     QJsonObject atlasObject = rootObject.value("atlas").toObject();
     QJsonObject spriteObject = rootObject.value("sprite").toObject();
+    QJsonObject dataObject = rootObject.value("data").toObject();
     QJsonArray excludeArray = rootObject.value("excludeList").toArray();
     QJsonArray includeArray = rootObject.value("includeList").toArray();
     POT = atlasObject.value("POT").toBool();
@@ -274,7 +285,6 @@ void Configuration::ReadConfigurationFile(QString configFilePath)
     maxSize = atlasObject.value("size").toInt();
     textureFormat = atlasObject.value("textureFormat").toString();
     force = rootObject.value("force").toBool();
-    dataCompact = rootObject.value("dataCompact").toBool();
     inputDirectory = rootObject.value("inputDir").toString();
     outputDirectory = rootObject.value("outputDir").toString();
     resourceDirectory = rootObject.value("resDir").toString();
@@ -283,6 +293,9 @@ void Configuration::ReadConfigurationFile(QString configFilePath)
     spritePadding = spriteObject.value("padding").toInt();
     rotation = spriteObject.value("rotation").toBool();
     spriteSize = spriteObject.value("size").toInt();
+
+    dataCompact = dataObject.value("compact").toBool();
+    dataFormat = dataObject.value("format").toString();
 
     inputDirectory.makeAbsolute();
 
@@ -307,13 +320,14 @@ void Configuration::SetupOutputDirectory(const QString &value)
 
 void Configuration::SetupResourceDirectory(const QString &value)
 {
-    if (value.isEmpty())
-        resourceDirectory = inputDirectory.filePath("../default_resource");
-    else
-        resourceDirectory = QDir(value);
+    noCopyResources = value.isEmpty();
 
-    resourceDirectory.mkpath(".");
-    resourceDirectory.makeAbsolute();
+    if(!noCopyResources)
+    {
+        resourceDirectory = QDir(value);
+        resourceDirectory.mkpath(".");
+        resourceDirectory.makeAbsolute();
+    }
 }
 
 void ::Configuration::SetUpFileList(const QString &value, QVector<QFileInfo> &container)
@@ -432,7 +446,6 @@ QString Configuration::GetDefaultConfigContent()
     rootObject.insert("outputDir", "");
     rootObject.insert("resDir", "");
     rootObject.insert("force", true);
-    rootObject.insert("dataCompact", false);
     rootObject.insert("includeList", QJsonArray());
     rootObject.insert("excludeList", QJsonArray());
     rootObject.insert("extrudeList", QJsonArray());
@@ -453,11 +466,17 @@ QString Configuration::GetDefaultConfigContent()
     spriteObject.insert("extrude", 1);
     rootObject.insert("sprite", spriteObject);
 
+    QJsonObject dataObject;
+    dataObject.insert("format", "atlas");
+    dataObject.insert("compact", false);
+    rootObject.insert("data", dataObject);
+
     document.setObject(rootObject);
     return document.toJson();
 }
 
-void Configuration::ProcessInitDirective(bool is_init)
+void Configuration::
+ProcessInitDirective(bool is_init)
 {
     if (!is_init)
         return;
@@ -483,7 +502,7 @@ void Configuration::PrintConfiguration()
     cout
             << std::setw(25) << std::left << "input directory" << inputDirectory.path().toStdString() << "\n"
             << std::setw(25) << std::left << "output directory" << outputDirectory.path().toStdString() << "\n"
-            << std::setw(25) << std::left << "resource directory" << resourceDirectory.path().toStdString() << "\n"
+            << std::setw(25) << std::left << "resource directory" << (noCopyResources ? "" : resourceDirectory.path().toStdString()) << "\n"
             << std::setw(25) << std::left << "crop alpha" << std::boolalpha << cropAlpha << "\n"
             << std::setw(25) << std::left << "allow rotation" << rotation << "\n"
             << std::setw(25) << std::left << "max sprite size" << spriteSize << "\n"
@@ -494,6 +513,7 @@ void Configuration::PrintConfiguration()
             << std::setw(25) << std::left << "texture format" << textureFormat.toStdString() << "\n"
             << std::setw(25) << std::left << "texture quality" << textureQuality << "\n"
             << std::setw(25) << std::left << "data compact" << std::boolalpha << dataCompact << "\n"
+            << std::setw(25) << std::left << "data format" << dataFormat.toStdString() << "\n"
             << std::setw(25) << std::left << "POT" << POT << "\n\n"
             << "EXCLUDE IMAGES\n";
     for (const QFileInfo &fileInfo : excludeImages)

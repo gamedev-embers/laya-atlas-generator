@@ -23,6 +23,8 @@ public:
                 outputDirectory,
                 resourceDirectory;
 
+    static bool noCopyResources;
+
     // sprite properties
     static bool cropAlpha,
                 rotation;
@@ -40,6 +42,7 @@ public:
     // other properties
     static bool force;
     static bool dataCompact;
+    static QString dataFormat;
     static QVector<QFileInfo> excludeImages;
     static QVector<QFileInfo> includeImages;
     static QVector<QFileInfo> extrudeImages;
@@ -58,7 +61,7 @@ private:
     static void SetUpFileList           (const QString &value, QVector<QFileInfo>& container);
     static void SetUpFileList           (const QJsonArray& list, QVector<QFileInfo>& container);
     static void SetupPixelFormat        (QString pixelFormatString);
-    static void ProcessInitDirective  (bool is_init);
+    static void ProcessInitDirective    (bool is_init);
     static void PrintConfiguration();
 
     static QString pixelFormatString;
