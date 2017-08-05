@@ -8,7 +8,6 @@
 
 #include <fstream>
 #include <iostream>
-#include <io.h>
 
 #include "Utils.h"
 #include "Configuration.h"
@@ -79,6 +78,11 @@ QString file_utils::GetRelativeToInputDirectoryPath(QString path)
 
 bool file_utils::mkdirs(std::string path)
 {
+#ifdef __APPLE__
+    std::string cmd = "mkdir -p ";
+    cmd += path;
+    system(cmd.c_str());
+#else
     using namespace  std;
 
     vector<string> folders;
@@ -101,6 +105,7 @@ bool file_utils::mkdirs(std::string path)
         ret = mkdir(path.c_str()) == 0;
     }
     return ret;
+#endif
 }
 
 int ::math_utils::CeilPOT(int value)
