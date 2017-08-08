@@ -5,6 +5,10 @@
 #ifndef ATLASGENERATOR_UTILS_H
 #define ATLASGENERATOR_UTILS_H
 
+#ifdef WIN32
+#include <io.h>
+#endif
+
 namespace file_utils
 {
     QString GetRelativeToInputDirectoryPath(QString path);
@@ -17,5 +21,6 @@ namespace math_utils
 {
     int CeilPOT(int value);
 }
+
 
 #endif //ATLASGENERATOR_UTILS_H

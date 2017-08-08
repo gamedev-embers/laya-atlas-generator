@@ -100,6 +100,7 @@ void JsonExport::Export(const QString &file_path)
     }
 
     QTextStream out_stream(&out_file);
+    out_stream.setCodec("utf-8");
     out_stream << json_document.toJson(Configuration::dataCompact ? QJsonDocument::Compact : QJsonDocument::Indented);
     out_stream.flush();
 

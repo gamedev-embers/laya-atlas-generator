@@ -5,9 +5,11 @@
 #include <QtCore/QFileInfo>
 #include <QtCore/QDir>
 #include <QRegularExpression>
+#include <QTextCodec>
 
 #include <fstream>
 #include <iostream>
+#include <regex>
 
 #include "Utils.h"
 #include "Configuration.h"
@@ -78,33 +80,21 @@ QString file_utils::GetRelativeToInputDirectoryPath(QString path)
 
 bool file_utils::mkdirs(std::string path)
 {
-#ifdef __APPLE__
+#ifndef WIN32
     std::string cmd = "mkdir -p ";
     cmd += path;
     system(cmd.c_str());
 #else
-    using namespace  std;
+    std::regex pattern("/");
+    path = std::regex_replace(path, pattern, "\\");
 
-    vector<string> folders;
-    while(access(path.c_str(), 0) == -1)
-    {
-        auto pos = path.find_last_of("\\/");
+    QTextCodec *code = QTextCodec::codecForName("gbk");
+    path = code->fromUnicode(path.c_str()).toStdString();
 
-        if(pos == string::npos)
-            break;
-
-        folders.push_back(path.substr(pos+1));
-        path = path.substr(0, pos);
-    }
-
-    bool ret = false;
-    while(folders.size())
-    {
-        path += '/' + folders.back();
-        folders.pop_back();
-        ret = mkdir(path.c_str()) == 0;
-    }
-    return ret;
+    std::string cmd = "mkdir ";
+    cmd += path;
+    std::cout << cmd << std::endl;
+    system(cmd.c_str());
 #endif
 }
 
