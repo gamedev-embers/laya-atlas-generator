@@ -14,7 +14,7 @@ namespace file_utils
     QString GetRelativeToInputDirectoryPath(QString path);
     bool Copy(const QString &from, const QString &to);
     void CopyToResourceDirectory(const QString &path);
-    bool mkdirs(std::string path);
+    void mkdirs(std::string path);
 }
 
 namespace math_utils

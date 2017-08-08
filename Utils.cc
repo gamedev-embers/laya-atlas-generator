@@ -37,16 +37,16 @@ bool file_utils::Copy(const QString &from, const QString &to)
     }
     else
     {
+        char buffer[1024];
         FILE *in, *out;
         in = fopen(from.toStdString().c_str(), "rb");
         out = fopen(to.toStdString().c_str(), "wb");
         if(in && out)
         {
-            void *buf;
-            while(!feof(in))
+            int len;
+            while((len = fread(buffer, sizeof(char), 1024, in)) > 0)
             {
-                fread(&buf, 1, 1, in);
-                fwrite(&buf, 1, 1, out);
+                fwrite(buffer, sizeof(char), len, out);
             }
             fclose(in);
             fclose(out);
@@ -78,8 +78,12 @@ QString file_utils::GetRelativeToInputDirectoryPath(QString path)
     return Configuration::inputDirectory.relativeFilePath(path);
 }
 
-bool file_utils::mkdirs(std::string path)
+void file_utils::mkdirs(std::string path)
 {
+    QFile f(path.c_str());
+    if(f.exists())
+        return;
+
 #ifndef WIN32
     std::string cmd = "mkdir -p ";
     cmd += path;
