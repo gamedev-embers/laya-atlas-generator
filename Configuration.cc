@@ -260,6 +260,7 @@ void Configuration::ReadConfigurationFile(QString configFilePath)
 
     // read content
     QTextStream in_stream(&configFile);
+    in_stream.setCodec("utf-8");
 
     // parse content
     auto content = in_stream.readAll().toUtf8();
