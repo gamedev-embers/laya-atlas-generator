@@ -46,73 +46,61 @@ QImage *AtlasPacker::ImageCropAlpha(const QImage *input, Rect &newBounds)
     // crop top
     for (int row = 0; row < input->height(); ++row)
     {
-        uchar result = accumulate(
-                input->scanLine(row),
-                input->scanLine(row) + input->bytesPerLine(),
-                0,
-                std::bit_or<uchar>());
-        if (result != 0)
+        for(int col = 3; col < input->bytesPerLine(); col += 4)
         {
-            y = row;
-            break;
+            if(*(input->scanLine(row) + col) != 0)
+            {
+                y = row;
+                goto step2;
+            }
         }
     }
-
+    step2:
     // crop bottom
     for (int row = input->height() - 1; row >= 0; --row)
     {
-        uchar result = accumulate(
-                input->scanLine(row),
-                input->scanLine(row) + input->bytesPerLine(),
-                0,
-                std::bit_or<uchar>());
-        if (result != 0)
+        for(int col = 3; col < input->bytesPerLine(); col += 4)
         {
-            h = row - y + 1;
-            break;
+            if(*(input->scanLine(row) + col) != 0)
+            {
+                h = row - y + 1;
+                goto step3;
+            }
         }
     }
 
+    step3:
     // crop left
     for (int col = 0; col < input->width(); ++col)
     {
-        uchar result = 0;
         for (int row = 0; row < input->height(); ++row)
         {
             const uchar *pixel = input->scanLine(row) + col * 4;
-            result |= *(pixel + 0);
-            result |= *(pixel + 1);
-            result |= *(pixel + 2);
-            result |= *(pixel + 3);
-        }
-
-        if (result != 0)
-        {
-            x = col;
-            break;
+            if(*(pixel + 3) != 0)
+            {
+                x = col;
+                goto step4;
+            }
         }
     }
 
+    step4:
     // crop right
     for (int col = input->width() - 1; col >= 0; --col)
     {
-        uchar result = 0;
         for (int row = 0; row < input->height(); ++row)
         {
             const uchar *pixel = input->scanLine(row) + col * 4;
-            result |= *(pixel + 0);
-            result |= *(pixel + 1);
-            result |= *(pixel + 2);
-            result |= *(pixel + 3);
-        }
 
-        if (result != 0)
-        {
-            w = col - x + 1;
-            break;
+            if(*(pixel + 3) != 0)
+            {
+                w = col - x + 1;
+                goto end;
+            }
         }
     }
 
+    end:
     newBounds.x = x;
     newBounds.y = y;
     newBounds.width = w;
@@ -336,8 +324,9 @@ void AtlasPacker::GenerateAtlas()
     cout << "SIZE bin(" << best_method.bin_size.width << ", " << best_method.bin_size.height << ") "
          << "canvas(" << best_method.opacity_size.width << ", " << best_method.opacity_size.height << ")\n";
 
-
-    QImage *canvas = new QImage(best_method.opacity_size.width, best_method.opacity_size.height, QImage::Format_ARGB32);
+    int w = Configuration::POT ? best_method.bin_size.width : best_method.opacity_size.width;
+    int h = Configuration::POT ? best_method.bin_size.height: best_method.opacity_size.height;
+    QImage *canvas = new QImage(w, h, QImage::Format_ARGB32);
     canvas->fill(0);
 
     for (int i = 0; i < (int) best_method.images.size(); ++i)
@@ -417,10 +406,20 @@ void AtlasPacker::StorageInsertResult(QVector<HeuristicResult> &heuristicResult,
 
         if (Configuration::POT)
         {
-            if (bin_height >= bin_width)
-                bin_width *= 2;
+            if(sizeIncreaseMethod == 0)
+            {
+                if (bin_height >= bin_width)
+                    bin_width *= 2;
+                else
+                    bin_height *= 2;
+            }
             else
-                bin_height *= 2;
+            {
+                if (bin_width >= bin_height)
+                    bin_height *= 2;
+                else
+                    bin_width *= 2;
+            }
         } else
         {
             int delta;
