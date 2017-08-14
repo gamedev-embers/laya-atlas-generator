@@ -84,11 +84,7 @@ void file_utils::mkdirs(std::string path)
     if(f.exists())
         return;
 
-#ifndef WIN32
-    std::string cmd = "mkdir -p ";
-    cmd += path;
-    system(cmd.c_str());
-#else
+#ifdef WIN32
     std::regex pattern("/");
     path = std::regex_replace(path, pattern, "\\");
 
@@ -98,6 +94,10 @@ void file_utils::mkdirs(std::string path)
     std::string cmd = "mkdir ";
     cmd += path;
     std::cout << cmd << std::endl;
+    system(cmd.c_str());
+#else
+    std::string cmd = "mkdir -p ";
+    cmd += path;
     system(cmd.c_str());
 #endif
 }
