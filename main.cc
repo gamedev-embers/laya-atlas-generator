@@ -175,22 +175,24 @@ int main(int argc, char **argv)
     QCoreApplication a(argc, argv);
 
     Configuration::ParseCommandLine(a);
-    CheckResourceModification();
+    //CheckResourceModification();
 
-    // get files in input directory.
+    // 资源的根目录和其他目录不一样
+    // 位于资源根目录下的图片不会被打包
     QFileInfoList file_list = Configuration::inputDirectory.entryInfoList(QDir::Files | QDir::Dirs | QDir::NoDotAndDotDot);
     for(const QFileInfo & fileInfo : file_list)
     {
         QString filePath(fileInfo.filePath());
+        // 根目录下的目录稍后会被打包成图集
         if(fileInfo.isDir())
         {
             directories.push_back(QDir(filePath));
         }
-        // skip images in input directory
+        // 根目录下的文件被直接复制
         else
         {
             file_utils::CopyToResourceDirectory(filePath);
-            cout << "SKIP " << filePath.toStdString() << "\n";
+            cout << "INROOT " << filePath.toStdString() << "\n";
         }
     }
 

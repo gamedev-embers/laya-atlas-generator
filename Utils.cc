@@ -37,10 +37,20 @@ bool file_utils::Copy(const QString &from, const QString &to)
     }
     else
     {
+        std::string from_string, to_string;
+#ifdef WIN32
+        QTextCodec *codec = QTextCodec::codecForName("gbk");
+        from_string = codec->fromUnicode(from).toStdString();
+        to_string = codec->fromUnicode(to).toStdString();
+#else
+        from_string = from.toStdString();
+        to_string = to.toStdString();
+#endif
+
         char buffer[1024];
         FILE *in, *out;
-        in = fopen(from.toStdString().c_str(), "rb");
-        out = fopen(to.toStdString().c_str(), "wb");
+        in = fopen(from_string.c_str(), "rb");
+        out = fopen(to_string.c_str(), "wb");
         if(in && out)
         {
             int len;
