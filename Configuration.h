@@ -48,7 +48,7 @@ public:
     static QVector<QFileInfo> extrudeImages;
 
     // static function declarations
-    static void ParseCommandLine(const QCoreApplication &application);
+    static void parseCommandLine(const QCoreApplication &application);
     static bool IsExclude(const QFileInfo &fileInfo);
     static bool IsInclude(const QFileInfo &fileInfo);
     static bool IsExtrude(const QFileInfo &fileInfo);

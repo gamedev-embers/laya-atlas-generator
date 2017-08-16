@@ -55,7 +55,7 @@ QVector<QFileInfo> Configuration::includeImages;
 QVector<QFileInfo> Configuration::extrudeImages;
 
 // static function definitions
-void Configuration::ParseCommandLine(const QCoreApplication &application)
+void Configuration::parseCommandLine(const QCoreApplication &application)
 {
     // command line options
     QCommandLineOption outputOption(

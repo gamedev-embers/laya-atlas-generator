@@ -6,30 +6,109 @@
 #include <QtGui/QImage>
 
 #include <fstream>
+#include <sstream>
 #include <iostream>
+#include <cstdio>
 
 #include "Configuration.h"
 #include "Utils.h"
 #include "AtlasPacker.h"
 
-using std::cout;
-using std::cerr;
-using std::vector;
+#include "CRC32/CRC32.h"
 
+using namespace std;
+
+using RecordItem = map<string, unsigned short>;
+struct RecordItems
+{
+    RecordItem pictures;
+    RecordItem regularFiles;
+};
+using Record = vector<pair<QString, RecordItems*>>;
+
+Record record;
+RecordItems *processingDirRecordItems;
 vector<QDir> directories;
+vector<tuple<QString, QImage*, unsigned short>> imagesInCurrentDirectory;
+stringstream recordSStream;
+
+CRC32 crc;
 
 void ProcessFile(QFileInfo &file_info, AtlasPacker &atlas_packer, vector<QDir> &directories);
-void GenerateAtlas(AtlasPacker& atlas_packer, const QDir &dir);
+
+void GenerateAtlas(AtlasPacker &atlas_packer, const QDir &dir);
+
 void ProcessRegularFile(QString filePath, AtlasPacker &atlas_packer);
 
-// 检查资源（输入目录下的所有文件）是否被修改过（自上次打包）。
-// 在资源已修改的情况下，将在调用处继续执行程序。
-// 在资源未修改的情况下：
-// - 用户指定了<force>，将在调用处继续执行程序。
-// - 用户未指定<force>，直接exit。
-void CheckResourceModification()
+void readRecord();
+void PackDirectories();
+void ProcessFile(QFileInfo &file_info, AtlasPacker &atlas_packer, vector<QDir> &directories);
+void ProcessRegularFile(QString filePath, AtlasPacker &atlas_packer);
+bool isRegularFileModified(QString filePath, unsigned short crc);
+bool isImageFileModified(QString filePath, unsigned short crc);
+bool needRepack();
+void writeRecord();
+void free();
+
+void GenerateAtlas(AtlasPacker &atlas_packer, const QDir &dir)
 {
-    // 用户指定了强制打包时，不需要检查后续步骤
+    if (atlas_packer.IsEmpty())
+        return;
+
+    atlas_packer.PackBin();
+
+    // get export atlas filename.
+    QString relative = Configuration::inputDirectory.relativeFilePath(dir.path());
+    atlas_packer.ExportAtlas(relative);
+}
+
+int main(int argc, char **argv)
+{
+    QCoreApplication a(argc, argv);
+
+    Configuration::parseCommandLine(a);
+    readRecord();
+
+    //CheckResourceModification();
+
+    recordSStream << std::hex << std::uppercase;
+    // 资源的根目录和其他目录不一样
+    // 位于资源根目录下的图片不会被打包
+    recordSStream << "D ." << '\n';
+    QFileInfoList file_list = Configuration::inputDirectory.entryInfoList(
+            QDir::Files | QDir::Dirs | QDir::NoDotAndDotDot);
+    for (const QFileInfo &fileInfo : file_list)
+    {
+        QString filePath(fileInfo.filePath());
+        // 根目录下的目录稍后会被打包成图集
+        if (fileInfo.isDir())
+        {
+            directories.push_back(QDir(filePath));
+        }
+            // 根目录下的文件被直接复制
+        else
+        {
+            recordSStream << "R " << crc.fileCrc(filePath.toStdString()) << ' ' << fileInfo.fileName().toStdString()
+                          << '\n';
+            file_utils::CopyToResourceDirectory(filePath);
+            cout << "INROOT " << filePath.toStdString() << "\n";
+        }
+    }
+
+    while (directories.size() > 0)
+        PackDirectories();
+
+    writeRecord();
+
+    cout << std::flush;
+
+    free();
+
+    return EXIT_SUCCESS;
+}
+
+void readRecord()
+{
     if (Configuration::force)
     {
         cout << "Force Publication.\n";
@@ -37,49 +116,62 @@ void CheckResourceModification()
     }
 
     QFile record_file(Configuration::outputDirectory.filePath(".rec"));
-
-    // 检查打包记录并且得出是否重新打包
-    bool need_repack = true;
-    QFileInfo input_file_info(Configuration::input.path());
-    qint64 last_write_time = input_file_info.lastModified().msecsTo(QDateTime());
-
     if (record_file.exists())
     {
         if (record_file.open(QFile::ReadOnly))
         {
-            QString prev_pack_time;
+            QString line;
             QTextStream in(&record_file);
-            in.readLineInto(&prev_pack_time);
+
+            RecordItems *recordItems;
+            while (!in.atEnd())
+            {
+                in.readLineInto(&line);
+                QStringList stringList = line.split(' ');
+
+                if (stringList.at(0) == "D")
+                {
+                    recordItems = new RecordItems;
+                    record.push_back({ stringList.at(1), recordItems });
+//                    cout << "D " << stringList.at(1).toStdString() << std::endl;
+                } else
+                {
+                    unsigned int crc;
+                    sscanf(stringList.at(1).toStdString().c_str(), "%x", &crc);
+                    pair<string, unsigned short> value = { stringList.at(2).toStdString(), static_cast<unsigned short>(crc) };
+                    if (stringList.at(0) == "R")
+                    {
+                        //                    cout << "R " << stringList.at(2).toStdString() << std::endl;
+                        recordItems->regularFiles.insert(value);
+                    } else if (stringList.at(0) == "P")
+                    {
+//                        cout << "P " << stringList.at(2).toStdString() << std::endl;
+                        recordItems->pictures.insert(value);
+                    }
+                }
+
+            }
             record_file.close();
-
-            need_repack = (prev_pack_time.toLongLong() != last_write_time);
         }
-    }
-
-    // 覆盖打包记录
-    if (need_repack)
-    {
-        if (record_file.open(QFile::WriteOnly))
-        {
-            QTextStream out(&record_file);
-            out << last_write_time
-                << "\nThe precede value represent a timestamp is for atlas packing.";
-            record_file.close();
-        }
-
-        cout << "Resources have been modified.\n";
-    }
-
-    if (!need_repack)
-    {
-        cout << "Resources have no change.\n";
-        exit(EXIT_SUCCESS);
     }
 }
 
 void PackDirectories()
 {
+    imagesInCurrentDirectory.clear();
     QDir dir = directories.front();
+
+    recordSStream << "D " << file_utils::GetRelativeToInputDirectoryPath(dir.path()).toStdString() << '\n';
+
+    // 在record中找到这个目录的记录（可能没有记录）
+    for(auto &item : record)
+    {
+        if(item.first == file_utils::GetRelativeToInputDirectoryPath(dir.path()))
+        {
+            processingDirRecordItems = item.second;
+            break;
+        }
+    }
     cout << "DIRECTORY " << dir.path().toStdString() << '\n';
 
     directories.erase(directories.begin());
@@ -97,24 +189,23 @@ void PackDirectories()
 
     AtlasPacker atlas_packer;
 
-    for(QFileInfo& file_info : file_list)
+    for (QFileInfo &file_info : file_list)
         ProcessFile(file_info, atlas_packer, directories);
+
+    if(needRepack())
+    {
+        for(auto &image : imagesInCurrentDirectory)
+        {
+            atlas_packer.AddImage(std::get<0>(image), std::get<1>(image));
+        }
+    }
+
+    // 重置目录记录为空指针，否则下次未找到记录时会使用上次的目录记录
+    processingDirRecordItems = nullptr;
 
     cout << "\n";
 
     GenerateAtlas(atlas_packer, dir);
-}
-
-void GenerateAtlas(AtlasPacker& atlas_packer, const QDir &dir)
-{
-    if(atlas_packer.IsEmpty())
-        return;
-
-    atlas_packer.PackBin();
-
-    // get export atlas filename.
-    QString relative = Configuration::inputDirectory.relativeFilePath(dir.path());
-    atlas_packer.ExportAtlas(relative);
 }
 
 void ProcessFile(QFileInfo &file_info, AtlasPacker &atlas_packer, vector<QDir> &directories)
@@ -123,83 +214,148 @@ void ProcessFile(QFileInfo &file_info, AtlasPacker &atlas_packer, vector<QDir> &
     // 检查到目录
     if (file_info.isDir())
         directories.push_back(QDir(file_path));
-    // 检查到常规文件
+        // 检查到常规文件
     else
         ProcessRegularFile(file_path, atlas_packer);
+}
+
+bool isRegularFileModified(QString filePath, unsigned short crc)
+{
+    std::string fileName = QFileInfo(filePath).fileName().toStdString();
+    auto files = processingDirRecordItems->regularFiles;
+
+    if(files.find(fileName) != files.end())
+    {
+        if(files.at(fileName) == crc)
+            return false;
+    }
+    return true;
+}
+
+bool isImageFileModified(QString filePath, unsigned short crc)
+{
+    std::string fileName = QFileInfo(filePath).fileName().toStdString();
+    auto files = processingDirRecordItems->pictures;
+
+    if(files.find(fileName) != files.end())
+    {
+        if(files.at(fileName) == crc)
+            return false;
+    }
+    return true;
 }
 
 void ProcessRegularFile(QString filePath, AtlasPacker &atlas_packer)
 {
     std::string fileName = QFileInfo(filePath).fileName().toStdString();
+    unsigned short crc32 = crc.fileCrc(filePath.toStdString());
+    bool isModified = true;
+
     // 检查文件是否被用户排除
     if (Configuration::IsExclude(QFileInfo(filePath)))
     {
-        file_utils::CopyToResourceDirectory(filePath);
-        cout << "EXCLUDE " << fileName << "\n";
-        return;
-    }
-
-    QImage *image = new QImage(filePath);
-
-    // is not a image.
-    if (image->isNull())
+        isModified = isRegularFileModified(filePath, crc32);
+        if(isModified)
+            file_utils::CopyToResourceDirectory(filePath);
+        recordSStream << "R ";
+        cout << (isModified ? "*" : "=") << " EXCLUDE " << fileName << "\n";
+    } else
     {
-        file_utils::CopyToResourceDirectory(filePath);
-        cout << "NOT IMAGE " << fileName << "\n";
-    }
-    else
-    {
-        // image's size is overflow.
-        if(image->width() > Configuration::spriteSize || image->height() > Configuration::spriteSize)
+        QImage *image = new QImage(filePath);
+
+        // is not a image.
+        if (image->isNull())
         {
-            if(Configuration::IsInclude(QFileInfo(filePath)))
-            {
-                cout << "INCLUDE " << fileName << "\n";
-            }
-            else
-            {
+            recordSStream << "R ";
+            isModified = isRegularFileModified(filePath, crc32);
+            if(isModified)
                 file_utils::CopyToResourceDirectory(filePath);
-                cout << "OVERFLOW " << fileName << "\n";
-                return;
+            cout << (isModified ? "*" : "=") << "NOT IMAGE " << fileName << "\n";
+        } else
+        {
+            recordSStream << "P ";
+            // image's size is overflow.
+            if (image->width() > Configuration::spriteSize || image->height() > Configuration::spriteSize)
+            {
+                if (Configuration::IsInclude(QFileInfo(filePath)))
+                {
+                    isModified = isImageFileModified(filePath, crc32);
+                    cout << (isModified ? "*" : "=") << " INCLUDE ";
+                } else
+                {
+                    isModified = isRegularFileModified(filePath, crc32);
+                    if(isModified)
+                        file_utils::CopyToResourceDirectory(filePath);
+                    cout << (isModified ? "*" : "=") << "OVERFLOW " << fileName << "\n";
+                    recordSStream
+                            << crc32
+                            << ' ' << fileName << '\n';
+                    return;
+                }
+            } else
+            {
+                isModified = isImageFileModified(filePath, crc32);
+                cout << (isModified ? "*" : "=") << " LOAD ";
+            }
+
+            imagesInCurrentDirectory.push_back(make_tuple(filePath, image, crc32));
+            cout << fileName << "\n";
+        }
+    }
+
+    recordSStream
+            << crc32
+            << ' ' << fileName << '\n';
+}
+
+bool needRepack()
+{
+    // 记录中没有这个目录的打包记录，或者强制发布的情况
+    if(processingDirRecordItems == nullptr || Configuration::force)
+        return true;
+
+    auto pictures = processingDirRecordItems->pictures;
+    if(imagesInCurrentDirectory.size() == pictures.size())
+    {
+        for(auto &image : imagesInCurrentDirectory)
+        {
+            auto fileName = QFileInfo(std::get<0>(image)).fileName().toStdString();
+            if(pictures.find(fileName) != pictures.end())
+            {
+                if(pictures.at(fileName) != std::get<2>(image))
+                    return true;
+            } else
+            {
+                return true;
             }
         }
+    } else{
+        return true;
+    }
 
-        // print information. We are loading image now.
-        cout << "LOAD "<< fileName << "\n";
-        atlas_packer.AddImage(filePath, image);
+    return false;
+}
+
+void writeRecord()
+{
+    std::ofstream ofs(Configuration::outputDirectory.filePath(".rec").toStdString());
+
+    if (ofs.is_open())
+    {
+        ofs << recordSStream.str();
+        ofs.flush();
+        ofs.close();
+    } else
+    {
+        cerr << "Unable to open .rec file." << std::flush;
     }
 }
 
-int main(int argc, char **argv)
+void free()
 {
-    QCoreApplication a(argc, argv);
-
-    Configuration::ParseCommandLine(a);
-    //CheckResourceModification();
-
-    // 资源的根目录和其他目录不一样
-    // 位于资源根目录下的图片不会被打包
-    QFileInfoList file_list = Configuration::inputDirectory.entryInfoList(QDir::Files | QDir::Dirs | QDir::NoDotAndDotDot);
-    for(const QFileInfo & fileInfo : file_list)
+    int n = record.size();
+    while(n--)
     {
-        QString filePath(fileInfo.filePath());
-        // 根目录下的目录稍后会被打包成图集
-        if(fileInfo.isDir())
-        {
-            directories.push_back(QDir(filePath));
-        }
-        // 根目录下的文件被直接复制
-        else
-        {
-            file_utils::CopyToResourceDirectory(filePath);
-            cout << "INROOT " << filePath.toStdString() << "\n";
-        }
+        delete record.at(n).second;
     }
-
-    while(directories.size() > 0)
-        PackDirectories();
-
-    cout << std::flush;
-
-    return EXIT_SUCCESS;
 }
