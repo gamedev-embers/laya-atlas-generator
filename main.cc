@@ -221,6 +221,8 @@ void ProcessFile(QFileInfo &file_info, AtlasPacker &atlas_packer, vector<QDir> &
 
 bool isRegularFileModified(QString filePath, unsigned short crc)
 {
+    if(processingDirRecordItems == nullptr) return true;
+
     std::string fileName = QFileInfo(filePath).fileName().toStdString();
     auto files = processingDirRecordItems->regularFiles;
 
@@ -234,6 +236,8 @@ bool isRegularFileModified(QString filePath, unsigned short crc)
 
 bool isImageFileModified(QString filePath, unsigned short crc)
 {
+    if(processingDirRecordItems == nullptr) return true;
+
     std::string fileName = QFileInfo(filePath).fileName().toStdString();
     auto files = processingDirRecordItems->pictures;
 
