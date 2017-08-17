@@ -4,8 +4,8 @@
 #include <QtCore/QDateTime>
 #include <QtCore/QTimer>
 #include <QtGui/QImage>
+#include <QTextCodec>
 
-#include <fstream>
 #include <sstream>
 #include <iostream>
 #include <cstdio>
@@ -67,9 +67,8 @@ int main(int argc, char **argv)
     QCoreApplication a(argc, argv);
 
     Configuration::parseCommandLine(a);
-    readRecord();
 
-    //CheckResourceModification();
+    readRecord();
 
     recordSStream << std::hex << std::uppercase;
     // 资源的根目录和其他目录不一样
@@ -122,6 +121,7 @@ void readRecord()
         {
             QString line;
             QTextStream in(&record_file);
+            in.setCodec("utf8");
 
             RecordItems *recordItems;
             while (!in.atEnd())
@@ -132,18 +132,18 @@ void readRecord()
                 if (stringList.at(0) == "D")
                 {
                     recordItems = new RecordItems;
-                    record.push_back({ stringList.at(1), recordItems });
+                    record.push_back({ stringList.value(1), recordItems });
 //                    cout << "D " << stringList.at(1).toStdString() << std::endl;
                 } else
                 {
                     unsigned int crc;
-                    sscanf(stringList.at(1).toStdString().c_str(), "%x", &crc);
-                    pair<string, unsigned short> value = { stringList.at(2).toStdString(), static_cast<unsigned short>(crc) };
-                    if (stringList.at(0) == "R")
+                    sscanf(stringList.value(1).toStdString().c_str(), "%x", &crc);
+                    pair<string, unsigned short> value = { stringList.value(2).toStdString(), static_cast<unsigned short>(crc) };
+                    if (stringList.value(0) == "R")
                     {
                         //                    cout << "R " << stringList.at(2).toStdString() << std::endl;
                         recordItems->regularFiles.insert(value);
-                    } else if (stringList.at(0) == "P")
+                    } else if (stringList.value(0) == "P")
                     {
 //                        cout << "P " << stringList.at(2).toStdString() << std::endl;
                         recordItems->pictures.insert(value);
@@ -342,16 +342,26 @@ bool needRepack()
 
 void writeRecord()
 {
-    std::ofstream ofs(Configuration::outputDirectory.filePath(".rec").toStdString());
+    QString path = Configuration::outputDirectory.filePath(".rec");
 
-    if (ofs.is_open())
+    QFile outFile(path);
+    if(outFile.open(QFile::WriteOnly | QFile::Text))
     {
-        ofs << recordSStream.str();
-        ofs.flush();
-        ofs.close();
-    } else
+        QTextStream outStream(&outFile);
+        outStream.setCodec("utf8");
+
+        QString outString(recordSStream.str().c_str());
+#ifdef WIN32
+        QTextCodec *codec = QTextCodec::codecForName("utf8");
+        outString = codec->fromUnicode(outString);
+#endif
+        outStream << outString;
+        outStream.flush();
+        outFile.close();
+    }
+    else
     {
-        cerr << "Unable to open .rec file." << std::flush;
+        cerr << "Unable to open " << Configuration::outputDirectory.filePath(".rec").toStdString() << std::flush;
     }
 }
 
