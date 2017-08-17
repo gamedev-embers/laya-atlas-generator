@@ -8,6 +8,7 @@
 
 #include <sstream>
 #include <iostream>
+#include <iomanip>
 #include <cstdio>
 
 #include "Configuration.h"
@@ -18,7 +19,7 @@
 
 using namespace std;
 
-using RecordItem = map<string, unsigned short>;
+using RecordItem = map<string, unsigned int>;
 struct RecordItems
 {
     RecordItem pictures;
@@ -29,7 +30,7 @@ using Record = vector<pair<QString, RecordItems*>>;
 Record record;
 RecordItems *processingDirRecordItems;
 vector<QDir> directories;
-vector<tuple<QString, QImage*, unsigned short>> imagesInCurrentDirectory;
+vector<tuple<QString, QImage*, unsigned int>> imagesInCurrentDirectory;
 stringstream recordSStream;
 
 CRC32 crc;
@@ -37,15 +38,12 @@ CRC32 crc;
 void ProcessFile(QFileInfo &file_info, AtlasPacker &atlas_packer, vector<QDir> &directories);
 
 void GenerateAtlas(AtlasPacker &atlas_packer, const QDir &dir);
-
-void ProcessRegularFile(QString filePath, AtlasPacker &atlas_packer);
-
 void readRecord();
 void PackDirectories();
 void ProcessFile(QFileInfo &file_info, AtlasPacker &atlas_packer, vector<QDir> &directories);
-void ProcessRegularFile(QString filePath, AtlasPacker &atlas_packer);
-bool isRegularFileModified(QString filePath, unsigned short crc);
-bool isImageFileModified(QString filePath, unsigned short crc);
+void ProcessRegularFile(QString filePath);
+bool isRegularFileModified(QString filePath, unsigned int crc);
+bool isImageFileModified(QString filePath, unsigned int crc);
 bool needRepack();
 void writeRecord();
 void free();
@@ -127,25 +125,27 @@ void readRecord()
             while (!in.atEnd())
             {
                 in.readLineInto(&line);
-                QStringList stringList = line.split(' ');
 
-                if (stringList.at(0) == "D")
+                QChar fileType = line.at(0);
+
+                if (fileType == 'D')
                 {
+                    QString file = line.mid(2);
                     recordItems = new RecordItems;
-                    record.push_back({ stringList.value(1), recordItems });
+                    record.push_back({ file, recordItems });
 //                    cout << "D " << stringList.at(1).toStdString() << std::endl;
                 } else
                 {
+                    QString crcString = line.mid(2, 8);
+                    QString file = line.mid(11);
                     unsigned int crc;
-                    sscanf(stringList.value(1).toStdString().c_str(), "%x", &crc);
-                    pair<string, unsigned short> value = { stringList.value(2).toStdString(), static_cast<unsigned short>(crc) };
-                    if (stringList.value(0) == "R")
+                    sscanf(crcString.toStdString().c_str(), "%x", &crc);
+                    pair<string, unsigned int> value = { file.toStdString(), crc };
+                    if (fileType == 'R')
                     {
-                        //                    cout << "R " << stringList.at(2).toStdString() << std::endl;
                         recordItems->regularFiles.insert(value);
-                    } else if (stringList.value(0) == "P")
+                    } else if (fileType == 'P')
                     {
-//                        cout << "P " << stringList.at(2).toStdString() << std::endl;
                         recordItems->pictures.insert(value);
                     }
                 }
@@ -216,10 +216,10 @@ void ProcessFile(QFileInfo &file_info, AtlasPacker &atlas_packer, vector<QDir> &
         directories.push_back(QDir(file_path));
         // 检查到常规文件
     else
-        ProcessRegularFile(file_path, atlas_packer);
+        ProcessRegularFile(file_path);
 }
 
-bool isRegularFileModified(QString filePath, unsigned short crc)
+bool isRegularFileModified(QString filePath, unsigned int crc)
 {
     if(processingDirRecordItems == nullptr) return true;
 
@@ -234,7 +234,7 @@ bool isRegularFileModified(QString filePath, unsigned short crc)
     return true;
 }
 
-bool isImageFileModified(QString filePath, unsigned short crc)
+bool isImageFileModified(QString filePath, unsigned int crc)
 {
     if(processingDirRecordItems == nullptr) return true;
 
@@ -249,10 +249,10 @@ bool isImageFileModified(QString filePath, unsigned short crc)
     return true;
 }
 
-void ProcessRegularFile(QString filePath, AtlasPacker &atlas_packer)
+void ProcessRegularFile(QString filePath)
 {
     std::string fileName = QFileInfo(filePath).fileName().toStdString();
-    unsigned short crc32 = crc.fileCrc(filePath.toStdString());
+    unsigned int crc32 = crc.fileCrc(filePath.toStdString());
     bool isModified = true;
 
     // 检查文件是否被用户排除
@@ -274,10 +274,10 @@ void ProcessRegularFile(QString filePath, AtlasPacker &atlas_packer)
             isModified = isRegularFileModified(filePath, crc32);
             if(isModified)
                 file_utils::CopyToResourceDirectory(filePath);
-            cout << (isModified ? "*" : "=") << "NOT IMAGE " << fileName << "\n";
+            cout << (isModified ? "*" : "=") << " NOTIMAGE " << fileName << "\n";
         } else
         {
-            recordSStream << "P ";
+
             // image's size is overflow.
             if (image->width() > Configuration::spriteSize || image->height() > Configuration::spriteSize)
             {
@@ -287,11 +287,14 @@ void ProcessRegularFile(QString filePath, AtlasPacker &atlas_packer)
                     cout << (isModified ? "*" : "=") << " INCLUDE ";
                 } else
                 {
+                    recordSStream << "R ";
                     isModified = isRegularFileModified(filePath, crc32);
                     if(isModified)
                         file_utils::CopyToResourceDirectory(filePath);
-                    cout << (isModified ? "*" : "=") << "OVERFLOW " << fileName << "\n";
+                    cout << (isModified ? "*" : "=") << " OVERFLOW " << fileName << "\n";
                     recordSStream
+                            << setfill('0')
+                            << setw(8)
                             << crc32
                             << ' ' << fileName << '\n';
                     return;
@@ -304,12 +307,16 @@ void ProcessRegularFile(QString filePath, AtlasPacker &atlas_packer)
 
             imagesInCurrentDirectory.push_back(make_tuple(filePath, image, crc32));
             cout << fileName << "\n";
-        }
-    }
 
-    recordSStream
-            << crc32
-            << ' ' << fileName << '\n';
+            recordSStream << "P ";
+
+        }
+        recordSStream
+                << setfill('0')
+                << setw(8)
+                << crc32
+                << ' ' << fileName << '\n';
+    }
 }
 
 bool needRepack()

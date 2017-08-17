@@ -27,6 +27,11 @@
 #include <string>
 #include "CRC32.h"
 
+#ifdef WIN32
+#include <QFile>
+#include <QString>
+#endif
+
 #if defined(PROGMEM)
   #define FLASH_PROGMEM PROGMEM
   #define FLASH_READ_DWORD(x) (pgm_read_dword_near(x))
@@ -87,11 +92,19 @@ uint32_t CRC32::finalize() const
 unsigned int CRC32::fileCrc(std::string file)
 {
   reset();
-  FILE *in = fopen(file.c_str(), "rb");
-  unsigned char c;
-  while(fread(&c, sizeof(unsigned char), 1, in) > 0)
+  QFile f(file.c_str());
+  if(f.open(QFile::ReadOnly))
   {
-    update(c);
+      char *c = new char[1];
+      qint64 len;
+      while((len = f.read(c, 1)) > 0)
+      {
+           update(c[0]);
+      }
+  }
+  else
+  {
+      return 0;
   }
   return finalize();
 }
