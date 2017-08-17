@@ -27,10 +27,8 @@
 #include <string>
 #include "CRC32.h"
 
-#ifdef WIN32
 #include <QFile>
 #include <QString>
-#endif
 
 #if defined(PROGMEM)
   #define FLASH_PROGMEM PROGMEM

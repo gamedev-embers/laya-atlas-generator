@@ -194,10 +194,15 @@ void PackDirectories()
 
     if(needRepack())
     {
+        cout << "directory has been changed\n";
         for(auto &image : imagesInCurrentDirectory)
         {
             atlas_packer.AddImage(std::get<0>(image), std::get<1>(image));
         }
+    }
+    else
+    {
+        cout << "directory has not changes\n";
     }
 
     // 重置目录记录为空指针，否则下次未找到记录时会使用上次的目录记录
@@ -283,6 +288,7 @@ void ProcessRegularFile(QString filePath)
             {
                 if (Configuration::IsInclude(QFileInfo(filePath)))
                 {
+                    recordSStream << "P ";
                     isModified = isImageFileModified(filePath, crc32);
                     cout << (isModified ? "*" : "=") << " INCLUDE ";
                 } else
@@ -301,22 +307,21 @@ void ProcessRegularFile(QString filePath)
                 }
             } else
             {
+                recordSStream << "P ";
+
                 isModified = isImageFileModified(filePath, crc32);
                 cout << (isModified ? "*" : "=") << " LOAD ";
             }
 
             imagesInCurrentDirectory.push_back(make_tuple(filePath, image, crc32));
             cout << fileName << "\n";
-
-            recordSStream << "P ";
-
         }
-        recordSStream
-                << setfill('0')
-                << setw(8)
-                << crc32
-                << ' ' << fileName << '\n';
     }
+    recordSStream
+            << setfill('0')
+            << setw(8)
+            << crc32
+            << ' ' << fileName << '\n';
 }
 
 bool needRepack()
