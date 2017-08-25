@@ -40,7 +40,7 @@ void ProcessFile(QFileInfo &file_info, AtlasPacker &atlas_packer, vector<QDir> &
 void GenerateAtlas(AtlasPacker &atlas_packer, const QDir &dir);
 void readRecord();
 void PackDirectories();
-void ProcessFile(QFileInfo &file_info, AtlasPacker &atlas_packer, vector<QDir> &directories);
+void ProcessFile(QFileInfo &file_info, vector<QDir> &directories);
 void ProcessRegularFile(QString filePath);
 bool isRegularFileModified(QString filePath, unsigned int crc);
 bool isImageFileModified(QString filePath, unsigned int crc);
@@ -60,6 +60,15 @@ void GenerateAtlas(AtlasPacker &atlas_packer, const QDir &dir)
     atlas_packer.ExportAtlas(relative);
 }
 
+/*
+ * - 解析命令行
+ * - 读取打包记录
+ * - 遍历目录，找出需要打包的目录
+ * - 打包需要打包的目录
+ * - 更新打包记录文件
+ * - 内存释放
+ * - 退出
+ */
 int main(int argc, char **argv)
 {
     QCoreApplication a(argc, argv);
@@ -104,6 +113,19 @@ int main(int argc, char **argv)
     return EXIT_SUCCESS;
 }
 
+/*
+ * 记录文件保存在输出目录，名为.rec
+ * 格式为：
+ * D .
+ * D comp
+ * P D12221A9 bg.png
+ * P 9401CC40 blank.png
+ * P B03390E5 btn_close.png
+ * ...
+ *
+ * 前缀： D目录 P图片 R其他文件
+ * 第一行必然是D .，表示根目录
+ */
 void readRecord()
 {
     if (Configuration::force)
@@ -133,7 +155,6 @@ void readRecord()
                     QString file = line.mid(2);
                     recordItems = new RecordItems;
                     record.push_back({ file, recordItems });
-//                    cout << "D " << stringList.at(1).toStdString() << std::endl;
                 } else
                 {
                     QString crcString = line.mid(2, 8);
@@ -156,6 +177,14 @@ void readRecord()
     }
 }
 
+/*
+ * 遍历并决定是否打包目录
+ * - 检查是否被排除
+ * - 在打包记录中寻找旧记录
+ * - 遍历文件夹，得到CRC32
+ * - 根据当前的CRC32和记录检查和是否需要重新打包
+ * - 如果需要重新打包，则打包
+ */
 void PackDirectories()
 {
     imagesInCurrentDirectory.clear();
@@ -163,15 +192,6 @@ void PackDirectories()
 
     recordSStream << "D " << file_utils::GetRelativeToInputDirectoryPath(dir.path()).toStdString() << '\n';
 
-    // 在record中找到这个目录的记录（可能没有记录）
-    for(auto &item : record)
-    {
-        if(item.first == file_utils::GetRelativeToInputDirectoryPath(dir.path()))
-        {
-            processingDirRecordItems = item.second;
-            break;
-        }
-    }
     cout << "DIRECTORY " << dir.path().toStdString() << '\n';
 
     directories.erase(directories.begin());
@@ -182,6 +202,16 @@ void PackDirectories()
         cout << "EXCLUDE " << dir.absolutePath().toStdString() << "\n";
         file_utils::CopyToResourceDirectory(dir.path());
         return;
+    }
+
+    // 在record中找到这个目录的记录（可能没有记录）
+    for(auto &item : record)
+    {
+        if(item.first == file_utils::GetRelativeToInputDirectoryPath(dir.path()))
+        {
+            processingDirRecordItems = item.second;
+            break;
+        }
     }
 
     // 处理指定目录下所有文件
@@ -213,7 +243,10 @@ void PackDirectories()
     GenerateAtlas(atlas_packer, dir);
 }
 
-void ProcessFile(QFileInfo &file_info, AtlasPacker &atlas_packer, vector<QDir> &directories)
+/*
+ * 处理文件，可能是目录或者文件
+ */
+void ProcessFile(QFileInfo &file_info, vector<QDir> &directories)
 {
     QString file_path = file_info.filePath();
     // 检查到目录
@@ -224,6 +257,12 @@ void ProcessFile(QFileInfo &file_info, AtlasPacker &atlas_packer, vector<QDir> &
         ProcessRegularFile(file_path);
 }
 
+/**
+ * 和打包记录对比，检查类型为R的文件是否被修改过。如果没有这个目录的打包记录，当做被修改过。
+ * @param filePath 文件路径
+ * @param crc      文件的CRC32
+ * @return true则是修改过
+ */
 bool isRegularFileModified(QString filePath, unsigned int crc)
 {
     if(processingDirRecordItems == nullptr) return true;
@@ -239,6 +278,12 @@ bool isRegularFileModified(QString filePath, unsigned int crc)
     return true;
 }
 
+/**
+ * 和打包记录对比，检查图片文件是否被修改过。如果没有这个目录的打包记录，当做被修改过。
+ * @param filePath 文件路径
+ * @param crc      文件的CRC32
+ * @return true则是修改过
+ */
 bool isImageFileModified(QString filePath, unsigned int crc)
 {
     if(processingDirRecordItems == nullptr) return true;
@@ -254,6 +299,15 @@ bool isImageFileModified(QString filePath, unsigned int crc)
     return true;
 }
 
+/**
+ * 处理文件
+ * - 检查是否被排除，是则复制文件到资源目录（如果开启）
+ * - 检查是否是图片文件
+ *     - 是则检查是否尺寸超出
+ *         - 是则复制文件到资源目录（如果开启）
+ *     - 否则复制文件到资源目录（如果开启）
+ * @param filePath
+ */
 void ProcessRegularFile(QString filePath)
 {
     std::string fileName = QFileInfo(filePath).fileName().toStdString();
@@ -324,6 +378,9 @@ void ProcessRegularFile(QString filePath)
             << ' ' << fileName << '\n';
 }
 
+/*
+ * 根据打包记录中的CRC32，对比当前值，检查是否有文件变动
+ */
 bool needRepack()
 {
     // 记录中没有这个目录的打包记录，或者强制发布的情况
@@ -352,6 +409,9 @@ bool needRepack()
     return false;
 }
 
+/*
+ * 写入打包记录到输出目录
+ */
 void writeRecord()
 {
     QString path = Configuration::outputDirectory.filePath(".rec");

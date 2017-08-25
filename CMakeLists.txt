@@ -5,8 +5,8 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_AUTOMOC ON)
 
 SET(CMAKE_PREFIX_PATH
-        /opt/Qt5.9.0/5.9/gcc_64/lib/cmake/Qt5Core
-        /opt/Qt5.9.0/5.9/gcc_64/lib/cmake/Qt5Gui)
+        /Users/survivor/Applications/Qt5.9.0/5.9/clang_64/lib/cmake/Qt5Core
+        /Users/survivor/Applications/Qt5.9.0/5.9/clang_64/lib/cmake/Qt5Gui)
 
 find_package(Qt5Core)
 find_package(Qt5Gui)
@@ -20,11 +20,11 @@ set(SOURCE_FILES
         RectangleBinPack/ShelfBinPack.cpp
         RectangleBinPack/ShelfNextFitBinPack.cpp
         RectangleBinPack/SkylineBinPack.cpp
+        CRC32/CRC32.cpp
         AtlasPacker.cc
         Configuration.cc
         main.cc
         Utils.cc
-        DataExport.h
         JsonExport.cpp)
 
 add_executable(atlas_generator ${SOURCE_FILES})

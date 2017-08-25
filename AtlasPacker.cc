@@ -291,6 +291,7 @@ void AtlasPacker::GenerateAtlas()
     // 计算各种排列方式的优劣
     QVector<HeuristicResult> heuristic_results;
 
+    // 穷举打包算法，最后的参数0和1代表优先伸展宽度还是高度
     StorageInsertResult(heuristic_results, MaxRectsBinPack::RectBestAreaFit, 0);
     StorageInsertResult(heuristic_results, MaxRectsBinPack::RectBestAreaFit, 1);
     StorageInsertResult(heuristic_results, MaxRectsBinPack::RectBestLongSideFit, 0);
@@ -387,6 +388,10 @@ void AtlasPacker::GenerateAtlas()
     }
 }
 
+/*
+ * 从64*64开始，扩展画布，直至能容纳当前文件夹的所有图片。
+ * 如果容纳不下，则分为多张图
+ */
 void AtlasPacker::StorageInsertResult(QVector<HeuristicResult> &heuristicResult,
                                       MaxRectsBinPack::FreeRectChoiceHeuristic method,
                                       int sizeIncreaseMethod)

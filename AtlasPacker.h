@@ -73,6 +73,7 @@ private:
      *
      * @param heuristicResult   container to storage result.
      * @param method            specify heuristic method.
+     * @param type              0或1，宽度优先或高度优先
      */
     void StorageInsertResult(QVector<HeuristicResult> &heuristicResult,
                              rbp::MaxRectsBinPack::FreeRectChoiceHeuristic method,

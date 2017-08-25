@@ -8,3 +8,4 @@ default_resource
 .idea
 res*
 atlas-generator
+.DS_Store
