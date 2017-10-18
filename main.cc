@@ -35,8 +35,6 @@ stringstream recordSStream;
 
 CRC32 crc;
 
-void ProcessFile(QFileInfo &file_info, AtlasPacker &atlas_packer, vector<QDir> &directories);
-
 void GenerateAtlas(AtlasPacker &atlas_packer, const QDir &dir);
 void readRecord();
 void PackDirectories();
@@ -220,7 +218,7 @@ void PackDirectories()
     AtlasPacker atlas_packer;
 
     for (QFileInfo &file_info : file_list)
-        ProcessFile(file_info, atlas_packer, directories);
+        ProcessFile(file_info, directories);
 
     if(needRepack())
     {
