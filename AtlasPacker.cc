@@ -435,7 +435,12 @@ void AtlasPacker::StorageInsertResult(QVector<HeuristicResult> &heuristicResult,
                 float h_ceil_pot = (float) math_utils::CeilPOT(bin_height);
                 // make w_ceil_pot not equal to h_ceil_pot
                 if(w_ceil_pot == h_ceil_pot)
-                    w_ceil_pot = std::min((float)Configuration::maxSize, w_ceil_pot * 2);
+                {
+                    if(bin_width > bin_height)
+                        h_ceil_pot = std::min((float)Configuration::maxSize, h_ceil_pot * 2);
+                    else
+                        w_ceil_pot = std::min((float)Configuration::maxSize, w_ceil_pot * 2);
+                }
 
                 float expect_ratio = w_ceil_pot / h_ceil_pot;
                 float now_ratio    = (float) bin_width / (float)bin_height;
