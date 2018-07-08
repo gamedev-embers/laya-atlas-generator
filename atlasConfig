@@ -13,14 +13,14 @@
     "includeList": [
     "comp/image.png"
     ],
-    "inputDir": "res",
-    "outputDir": "",
-    "resDir": "",
+    "inputDir": "/Users/survivor/Downloads/assets",
+    "outputDir": "/Users/survivor/Downloads/out",
+    "resDir": "/Users/survivor/Downloads/res",
     "sprite": {
         "cropAlpha": true,
         "extrude": 1,
         "padding": 1,
         "rotation": false,
-        "size": 200
+        "size": 1024
     }
 }

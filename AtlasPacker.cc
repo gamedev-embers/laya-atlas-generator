@@ -374,7 +374,10 @@ void AtlasPacker::GenerateAtlas()
         ImageDrawImage(*canvas, *(image_info.image), rect.x, rect.y);
 
         // remove the image we had processed.
-        images.erase(images.begin());
+        auto firstImage = images.begin();
+        delete firstImage->image;
+        firstImage->image = nullptr;
+        images.erase(firstImage);
     }
     cout << '\n';
 
